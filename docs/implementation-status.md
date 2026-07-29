@@ -351,7 +351,7 @@
 ### 测试与验证
 
 - 单元测试 176 个：core 63（bridge 签名格式、createNexus、confirmPayment 直接路径、loadScript CDN 加载器 11 个、**element 生命周期 24 个**）+ fields 113（校验/格式化 55 + **校验器注册表 11** + **i18n 27** + **useCardInputs 20**）+ theme 26（计入 core）
-- E2E 脚本 19 个（Playwright Python，仓库根目录）：
+- E2E 脚本 19 个（Playwright Python，`tests/e2e/` 目录）：
   - `e2e-card-combined.py` — 填卡（含 postal code）→ 支付成功 → night/flat 主题断言 → hidePostalCode/disabled 切换 → focus/blur/clear 方法 → 事件日志验证
   - `e2e-card-split.py` — 三 iframe 填卡 → 分组聚合 → 支付成功
   - `e2e-3ds.py` — 3DS 卡 → 挑战页 → 批准 → 回跳 → 支付成功

@@ -29,7 +29,7 @@ with sync_playwright() as p:
     items = frame.locator(".line-item")
     expect(items).to_have_count(2)
     print(f"   Line items: {items.all_inner_texts()}")
-    page.screenshot(path="e2e-ec-01-loaded.png")
+    page.screenshot(path="e2e-screenshots/e2e-ec-01-loaded.png")
 
     print("3. Declined card shows error inside hosted page ...")
     frame.locator("#cs-number").fill("4000000000000002")
@@ -39,7 +39,7 @@ with sync_playwright() as p:
     error_el = frame.locator("#cs-error")
     expect(error_el).to_contain_text("拒绝", timeout=10000)
     print(f"   Error: {error_el.inner_text()}")
-    page.screenshot(path="e2e-ec-02-declined.png")
+    page.screenshot(path="e2e-screenshots/e2e-ec-02-declined.png")
 
     print("4. Valid card completes payment; success shown in iframe ...")
     frame.locator("#cs-number").fill("4242424242424242")
@@ -55,7 +55,7 @@ with sync_playwright() as p:
     print(f"   Parent result: {result_text}")
     assert "结账完成" in result_text and "cs_test_" in result_text and "complete" in result_text, f"Unexpected: {result_text}"
     assert "pi_test_" in result_text, f"Missing payment_intent: {result_text}"
-    page.screenshot(path="e2e-ec-03-success.png")
+    page.screenshot(path="e2e-screenshots/e2e-ec-03-success.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

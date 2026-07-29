@@ -17,7 +17,7 @@ with sync_playwright() as p:
 
     print("1. Navigating to /appearance ...")
     page.goto(f"{BASE}/appearance", wait_until="networkidle")
-    page.screenshot(path="e2e-appearance-01-loaded.png")
+    page.screenshot(path="e2e-screenshots/e2e-appearance-01-loaded.png")
     print("   Page loaded.")
 
     print("2. Locating fields iframe ...")
@@ -33,7 +33,7 @@ with sync_playwright() as p:
         page.wait_for_timeout(300)
     bg = card_el.evaluate("el => getComputedStyle(el).backgroundColor")
     print(f"   After cycling themes, background: {bg}")
-    page.screenshot(path="e2e-appearance-02-themes.png")
+    page.screenshot(path="e2e-screenshots/e2e-appearance-02-themes.png")
 
     print("4. Testing locale switching ...")
     for loc in ["en", "ja", "ko"]:
@@ -46,7 +46,7 @@ with sync_playwright() as p:
     print("5. Testing font switching ...")
     page.locator(".control-section .chip", has_text="Inter").first.click()
     page.wait_for_timeout(500)
-    page.screenshot(path="e2e-appearance-03-font.png")
+    page.screenshot(path="e2e-screenshots/e2e-appearance-03-font.png")
     page.locator(".control-section .chip", has_text="System Default").first.click()
     page.wait_for_timeout(300)
     print("   Font switched to Inter and back.")
@@ -58,7 +58,7 @@ with sync_playwright() as p:
     expect(color_input).to_be_visible(timeout=3000)
     color_input.fill("#ff0000")
     page.wait_for_timeout(500)
-    page.screenshot(path="e2e-appearance-04-custom-vars.png")
+    page.screenshot(path="e2e-screenshots/e2e-appearance-04-custom-vars.png")
     print("   Custom variables enabled, colorPrimary set to #ff0000.")
 
     page.locator(".var-grid .select-input").first.select_option("16px")
@@ -73,7 +73,7 @@ with sync_playwright() as p:
     rule_checkboxes = page.locator(".rule-item input[type='checkbox']")
     rule_checkboxes.first.check()
     page.wait_for_timeout(500)
-    page.screenshot(path="e2e-appearance-05-rules.png")
+    page.screenshot(path="e2e-screenshots/e2e-appearance-05-rules.png")
     print("   .Input rule enabled.")
 
     rule_checkboxes.nth(1).check()
@@ -90,7 +90,7 @@ with sync_playwright() as p:
     element_style_toggle = checkboxes.nth(1)
     element_style_toggle.check()
     page.wait_for_timeout(500)
-    page.screenshot(path="e2e-appearance-06-element-style.png")
+    page.screenshot(path="e2e-screenshots/e2e-appearance-06-element-style.png")
     print("   Element style enabled.")
     element_style_toggle.uncheck()
     page.wait_for_timeout(300)
@@ -115,7 +115,7 @@ with sync_playwright() as p:
     number_val = number_input.input_value()
     print(f"   After clear(), number input value: '{number_val}'")
     assert number_val == "", f"Expected empty after clear, got '{number_val}'"
-    page.screenshot(path="e2e-appearance-07-methods.png")
+    page.screenshot(path="e2e-screenshots/e2e-appearance-07-methods.png")
 
     print("10. Verifying event log entries ...")
     event_types = page.locator(".event-type").all_inner_texts()

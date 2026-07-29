@@ -33,7 +33,7 @@ with sync_playwright() as p:
     print("3. Selecting saved visa and paying ...")
     saved_items.first.click()
     expect(pay_btn).to_be_enabled(timeout=5000)
-    page.screenshot(path="e2e-pe-adv-01-saved.png")
+    page.screenshot(path="e2e-screenshots/e2e-pe-adv-01-saved.png")
     pay_btn.click()
     result_box = page.locator(".result-box--success")
     expect(result_box).to_be_visible(timeout=15000)
@@ -60,7 +60,7 @@ with sync_playwright() as p:
     email_input.blur()
     expect(frame.locator(".nexus-error")).to_be_visible(timeout=5000)
     expect(pay_btn).to_be_disabled()
-    page.screenshot(path="e2e-pe-adv-02-bad-email.png")
+    page.screenshot(path="e2e-screenshots/e2e-pe-adv-02-bad-email.png")
 
     print("7. Valid email completes and pays ...")
     email_input.fill("demo@nexus.dev")
@@ -68,7 +68,7 @@ with sync_playwright() as p:
     pay_btn.click()
     expect(page.locator(".result-box--success")).to_be_visible(timeout=15000)
     print(f"   Result: {page.locator('.result-box--success').inner_text()}")
-    page.screenshot(path="e2e-pe-adv-03-success.png")
+    page.screenshot(path="e2e-screenshots/e2e-pe-adv-03-success.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

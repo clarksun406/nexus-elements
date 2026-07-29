@@ -17,7 +17,7 @@ with sync_playwright() as p:
 
     print("1. Navigating to /setup-intent ...")
     page.goto(f"{BASE}/setup-intent", wait_until="networkidle")
-    page.screenshot(path="e2e-setup-01-loaded.png")
+    page.screenshot(path="e2e-screenshots/e2e-setup-01-loaded.png")
 
     print("2. Filling card in iframe ...")
     frame_locator = page.frame_locator("iframe[title='Nexus card element']")
@@ -41,7 +41,7 @@ with sync_playwright() as p:
     result_text = result_box.inner_text()
     print(f"   Result: {result_text}")
     assert "保存成功" in result_text and "seti_test_" in result_text, f"Unexpected result: {result_text}"
-    page.screenshot(path="e2e-setup-02-success.png")
+    page.screenshot(path="e2e-screenshots/e2e-setup-02-success.png")
 
     print("6. Declined card should surface error ...")
     page.reload(wait_until="networkidle")

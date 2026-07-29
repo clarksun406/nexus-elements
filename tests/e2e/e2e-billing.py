@@ -21,17 +21,17 @@ with sync_playwright() as p:
     print("2. Plan selection: monthly plan visible ...")
     expect(page.locator(".plan-card")).to_contain_text("Nexus Pro")
     expect(page.locator(".plan-card")).to_contain_text("¥29.00/月")
-    page.screenshot(path="e2e-billing-01-plan.png")
+    page.screenshot(path="e2e-screenshots/e2e-billing-01-plan.png")
 
     print("3. Switch to yearly plan ...")
     page.locator(".period-toggle button", has_text="年付").click()
     expect(page.locator(".plan-card")).to_contain_text("¥290.00/年")
-    page.screenshot(path="e2e-billing-02-yearly.png")
+    page.screenshot(path="e2e-screenshots/e2e-billing-02-yearly.png")
 
     print("4. Click '继续支付' to proceed to payment step ...")
     page.locator(".btn-pay", has_text="继续支付").click()
     expect(page.locator(".order-summary")).to_contain_text("年度订阅")
-    page.screenshot(path="e2e-billing-03-payment.png")
+    page.screenshot(path="e2e-screenshots/e2e-billing-03-payment.png")
 
     print("5. Wait for Payment Element iframe to load ...")
     frame = page.frame_locator("iframe[title='Nexus payment element']")
@@ -51,7 +51,7 @@ with sync_playwright() as p:
     expect(page.locator(".success-section")).to_be_visible(timeout=15000)
     expect(page.locator(".success-section")).to_contain_text("订阅成功")
     expect(page.locator(".success-detail")).to_contain_text("seti_")
-    page.screenshot(path="e2e-billing-04-success.png")
+    page.screenshot(path="e2e-screenshots/e2e-billing-04-success.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

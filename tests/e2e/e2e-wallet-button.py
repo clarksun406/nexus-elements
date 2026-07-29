@@ -22,48 +22,48 @@ with sync_playwright() as p:
     frame = page.frame_locator("iframe[title='Nexus walletButton element']").first
     frame.locator(".nexus-wb").wait_for(state="visible", timeout=10000)
     expect(frame.locator(".nexus-wb-text")).to_contain_text("Apple Pay")
-    page.screenshot(path="e2e-wb-01-apple-pay.png")
+    page.screenshot(path="e2e-screenshots/e2e-wb-01-apple-pay.png")
 
     print("3. Switching to Google Pay ...")
     page.locator(".controls .btn-group button", has_text="Google Pay").click()
     frame = page.frame_locator("iframe[title='Nexus walletButton element']").first
     expect(frame.locator(".nexus-wb-text")).to_contain_text("Google Pay", timeout=5000)
-    page.screenshot(path="e2e-wb-02-google-pay.png")
+    page.screenshot(path="e2e-screenshots/e2e-wb-02-google-pay.png")
 
     print("4. Switching to PayPal ...")
     page.locator(".controls .btn-group button", has_text="PayPal").click()
     frame = page.frame_locator("iframe[title='Nexus walletButton element']").first
     expect(frame.locator(".nexus-wb-text")).to_contain_text("PayPal", timeout=5000)
-    page.screenshot(path="e2e-wb-03-paypal.png")
+    page.screenshot(path="e2e-screenshots/e2e-wb-03-paypal.png")
 
     print("5. Switching to Link ...")
     page.locator(".controls .btn-group button", has_text="Link").click()
     frame = page.frame_locator("iframe[title='Nexus walletButton element']").first
     expect(frame.locator(".nexus-wb-text")).to_contain_text("Link", timeout=5000)
-    page.screenshot(path="e2e-wb-04-link.png")
+    page.screenshot(path="e2e-screenshots/e2e-wb-04-link.png")
 
     print("6. Changing button type to 'Buy' ...")
     page.locator(".controls .btn-group button", has_text="Buy").click()
     frame = page.frame_locator("iframe[title='Nexus walletButton element']").first
     expect(frame.locator(".nexus-wb-text")).to_contain_text("Buy", timeout=5000)
-    page.screenshot(path="e2e-wb-05-buy-type.png")
+    page.screenshot(path="e2e-screenshots/e2e-wb-05-buy-type.png")
 
     print("7. Switching to white theme ...")
     page.locator(".controls .btn-group button", has_text="White").first.click()
     frame = page.frame_locator("iframe[title='Nexus walletButton element']").first
     expect(frame.locator(".nexus-wb--white")).to_be_visible(timeout=5000)
-    page.screenshot(path="e2e-wb-06-white-theme.png")
+    page.screenshot(path="e2e-screenshots/e2e-wb-06-white-theme.png")
 
     print("8. Verifying all wallets preview section ...")
     previews = page.locator(".wallet-preview")
     expect(previews).to_have_count(4, timeout=5000)
-    page.screenshot(path="e2e-wb-07-all-previews.png")
+    page.screenshot(path="e2e-screenshots/e2e-wb-07-all-previews.png")
 
     print("9. Testing disabled state ...")
     page.locator("input[type='checkbox']").check()
     frame = page.frame_locator("iframe[title='Nexus walletButton element']").first
     expect(frame.locator(".nexus-wb[disabled]")).to_be_visible(timeout=5000)
-    page.screenshot(path="e2e-wb-08-disabled.png")
+    page.screenshot(path="e2e-screenshots/e2e-wb-08-disabled.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

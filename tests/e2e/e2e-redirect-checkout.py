@@ -21,7 +21,7 @@ with sync_playwright() as p:
     print("2. Order summary visible ...")
     expect(page.locator(".order-summary")).to_contain_text("Nexus Pro 年度订阅")
     expect(page.locator(".order-summary")).to_contain_text("¥129.00")
-    page.screenshot(path="e2e-redirect-01-loaded.png")
+    page.screenshot(path="e2e-screenshots/e2e-redirect-01-loaded.png")
 
     print("3. Clicking '前往支付' redirects to hosted checkout page ...")
     page.locator(".pay-btn").click()
@@ -30,7 +30,7 @@ with sync_playwright() as p:
     page.wait_for_url("**/__nexus-checkout/**", timeout=15000)
     total = page.locator("#cs-total")
     expect(total).to_contain_text("¥129.00", timeout=10000)
-    page.screenshot(path="e2e-redirect-02-checkout.png")
+    page.screenshot(path="e2e-screenshots/e2e-redirect-02-checkout.png")
 
     print("5. Filling card and submitting payment ...")
     page.locator("#cs-number").fill("4242424242424242")
@@ -44,7 +44,7 @@ with sync_playwright() as p:
     print("7. Success page shows session details ...")
     expect(page.locator(".result-box--success")).to_contain_text("cs_test_", timeout=10000)
     expect(page.locator(".result-box--success")).to_contain_text("complete", timeout=5000)
-    page.screenshot(path="e2e-redirect-03-success.png")
+    page.screenshot(path="e2e-screenshots/e2e-redirect-03-success.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

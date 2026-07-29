@@ -26,26 +26,26 @@ with sync_playwright() as p:
     expect(messages).to_have_count(3, timeout=5000)
     expect(messages.first).to_contain_text("Afterpay")
     expect(messages.first).to_contain_text("interest-free")
-    page.screenshot(path="e2e-pmm-01-loaded.png")
+    page.screenshot(path="e2e-screenshots/e2e-pmm-01-loaded.png")
 
     print("3. Selecting a different product updates the amount ...")
     page.locator(".product-item", has_text="无线蓝牙耳机").click()
     frame = page.frame_locator("iframe[title='Nexus paymentMethodMessaging element']")
     expect(frame.locator(".nexus-pmm-message").first).to_contain_text("$12.25", timeout=5000)
-    page.screenshot(path="e2e-pmm-02-amount-changed.png")
+    page.screenshot(path="e2e-screenshots/e2e-pmm-02-amount-changed.png")
 
     print("4. Switching currency to EUR ...")
     page.locator("select").first.select_option("EUR")
     frame = page.frame_locator("iframe[title='Nexus paymentMethodMessaging element']")
     expect(frame.locator(".nexus-pmm-message").first).to_contain_text("€", timeout=5000)
-    page.screenshot(path="e2e-pmm-03-eur.png")
+    page.screenshot(path="e2e-screenshots/e2e-pmm-03-eur.png")
 
     print("5. Switching to compact style ...")
     selects = page.locator("select")
     selects.nth(1).select_option("compact")
     frame = page.frame_locator("iframe[title='Nexus paymentMethodMessaging element']")
     expect(frame.locator(".nexus-pmm-compact")).to_be_visible(timeout=5000)
-    page.screenshot(path="e2e-pmm-04-compact.png")
+    page.screenshot(path="e2e-screenshots/e2e-pmm-04-compact.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

@@ -17,7 +17,7 @@ with sync_playwright() as p:
 
     print("1. Navigating to /bank-transfer ...")
     page.goto(f"{BASE}/bank-transfer", wait_until="networkidle")
-    page.screenshot(path="e2e-bank-01-loaded.png")
+    page.screenshot(path="e2e-screenshots/e2e-bank-01-loaded.png")
 
     # --- iDEAL ---
     print("2. iDEAL: search and select a bank ...")
@@ -34,7 +34,7 @@ with sync_playwright() as p:
 
     expect(page.locator(".result-box")).to_contain_text("complete: true", timeout=5000)
     expect(page.locator(".value-dump")).to_contain_text('"bank":', timeout=5000)
-    page.screenshot(path="e2e-bank-02-ideal.png")
+    page.screenshot(path="e2e-screenshots/e2e-bank-02-ideal.png")
 
     # --- IBAN ---
     print("3. IBAN: enter valid DE IBAN ...")
@@ -46,7 +46,7 @@ with sync_playwright() as p:
     iban_input.fill("DE89370400440532013000")
     expect(page.locator(".result-box")).to_contain_text("complete: true", timeout=5000)
     expect(page.locator(".value-dump")).to_contain_text("DE89", timeout=5000)
-    page.screenshot(path="e2e-bank-03-iban.png")
+    page.screenshot(path="e2e-screenshots/e2e-bank-03-iban.png")
 
     # --- BECS ---
     print("4. BECS: enter BSB + account number ...")
@@ -59,7 +59,7 @@ with sync_playwright() as p:
     frame.locator(".nexus-au-account").fill("123456789")
     expect(page.locator(".result-box")).to_contain_text("complete: true", timeout=5000)
     expect(page.locator(".value-dump")).to_contain_text("062000", timeout=5000)
-    page.screenshot(path="e2e-bank-04-becs.png")
+    page.screenshot(path="e2e-screenshots/e2e-bank-04-becs.png")
 
     # --- FPX ---
     print("5. FPX: select a bank ...")
@@ -69,7 +69,7 @@ with sync_playwright() as p:
     fpx_items.first.wait_for(state="visible", timeout=10000)
     fpx_items.first.click()
     expect(page.locator(".result-box")).to_contain_text("complete: true", timeout=5000)
-    page.screenshot(path="e2e-bank-05-fpx.png")
+    page.screenshot(path="e2e-screenshots/e2e-bank-05-fpx.png")
 
     # --- EPS ---
     print("6. EPS: select a bank ...")
@@ -79,7 +79,7 @@ with sync_playwright() as p:
     eps_items.first.wait_for(state="visible", timeout=10000)
     eps_items.first.click()
     expect(page.locator(".result-box")).to_contain_text("complete: true", timeout=5000)
-    page.screenshot(path="e2e-bank-06-eps.png")
+    page.screenshot(path="e2e-screenshots/e2e-bank-06-eps.png")
 
     # --- P24 ---
     print("7. P24: select a bank ...")
@@ -89,7 +89,7 @@ with sync_playwright() as p:
     p24_items.first.wait_for(state="visible", timeout=10000)
     p24_items.first.click()
     expect(page.locator(".result-box")).to_contain_text("complete: true", timeout=5000)
-    page.screenshot(path="e2e-bank-07-p24.png")
+    page.screenshot(path="e2e-screenshots/e2e-bank-07-p24.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

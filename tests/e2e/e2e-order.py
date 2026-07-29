@@ -24,7 +24,7 @@ with sync_playwright() as p:
 
     status_badge = frame.locator(".nexus-order-status")
     expect(status_badge).to_contain_text("处理中", timeout=5000)
-    page.screenshot(path="e2e-order-01-processing.png")
+    page.screenshot(path="e2e-screenshots/e2e-order-01-processing.png")
 
     print("3. Verifying order items are displayed ...")
     order_items = frame.locator(".nexus-order-item")
@@ -39,7 +39,7 @@ with sync_playwright() as p:
     print("5. Verifying shipping address section ...")
     expect(frame.locator(".nexus-order-address-name")).to_contain_text("张三")
     expect(frame.locator(".nexus-order-address-line")).to_contain_text("科技园南路")
-    page.screenshot(path="e2e-order-02-details.png")
+    page.screenshot(path="e2e-screenshots/e2e-order-02-details.png")
 
     print("6. Verifying timeline events ...")
     timeline_items = frame.locator(".nexus-order-timeline-item")
@@ -51,19 +51,19 @@ with sync_playwright() as p:
     expect(frame.locator(".nexus-order-status")).to_contain_text("已支付", timeout=5000)
     timeline_items = frame.locator(".nexus-order-timeline-item")
     expect(timeline_items).to_have_count(3, timeout=5000)
-    page.screenshot(path="e2e-order-03-paid.png")
+    page.screenshot(path="e2e-screenshots/e2e-order-03-paid.png")
 
     print("8. Switching to 'failed' status ...")
     page.locator(".status-btn", has_text="失败").click()
     frame = page.frame_locator("iframe[title='Nexus order element']")
     expect(frame.locator(".nexus-order-status")).to_contain_text("支付失败", timeout=5000)
-    page.screenshot(path="e2e-order-04-failed.png")
+    page.screenshot(path="e2e-screenshots/e2e-order-04-failed.png")
 
     print("9. Switching to 'cancelled' status ...")
     page.locator(".status-btn", has_text="已取消").click()
     frame = page.frame_locator("iframe[title='Nexus order element']")
     expect(frame.locator(".nexus-order-status")).to_contain_text("已取消", timeout=5000)
-    page.screenshot(path="e2e-order-05-cancelled.png")
+    page.screenshot(path="e2e-screenshots/e2e-order-05-cancelled.png")
 
     print("10. Switching to 'refunded' status ...")
     page.locator(".status-btn", has_text="已退款").click()
@@ -71,13 +71,13 @@ with sync_playwright() as p:
     expect(frame.locator(".nexus-order-status")).to_contain_text("已退款", timeout=5000)
     timeline_items = frame.locator(".nexus-order-timeline-item")
     expect(timeline_items).to_have_count(4, timeout=5000)
-    page.screenshot(path="e2e-order-06-refunded.png")
+    page.screenshot(path="e2e-screenshots/e2e-order-06-refunded.png")
 
     print("11. Switching back to 'pending' status ...")
     page.locator(".status-btn", has_text="待处理").click()
     frame = page.frame_locator("iframe[title='Nexus order element']")
     expect(frame.locator(".nexus-order-status")).to_contain_text("待处理", timeout=5000)
-    page.screenshot(path="e2e-order-07-pending.png")
+    page.screenshot(path="e2e-screenshots/e2e-order-07-pending.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

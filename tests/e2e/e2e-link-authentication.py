@@ -23,7 +23,7 @@ with sync_playwright() as p:
     phone_input = frame.locator(".nexus-link-phone")
     phone_input.wait_for(state="visible", timeout=10000)
     phone_input.fill("5551234567")
-    page.screenshot(path="e2e-link-01-phone.png")
+    page.screenshot(path="e2e-screenshots/e2e-link-01-phone.png")
 
     print("3. Send verification code ...")
     frame.locator(".nexus-link-send-btn").click()
@@ -32,7 +32,7 @@ with sync_playwright() as p:
     otp_inputs = frame.locator(".nexus-otp-input")
     expect(otp_inputs.first).to_be_visible(timeout=10000)
     expect(frame.locator(".nexus-link-subtitle")).to_contain_text("555")
-    page.screenshot(path="e2e-link-02-otp.png")
+    page.screenshot(path="e2e-screenshots/e2e-link-02-otp.png")
 
     print("5. Enter OTP code ...")
     for i, digit in enumerate("123456"):
@@ -44,7 +44,7 @@ with sync_playwright() as p:
     print("7. Verified state ...")
     expect(frame.locator(".nexus-link-verified")).to_be_visible(timeout=10000)
     expect(page.locator(".result-box")).to_contain_text("complete: true", timeout=5000)
-    page.screenshot(path="e2e-link-03-verified.png")
+    page.screenshot(path="e2e-screenshots/e2e-link-03-verified.png")
 
     print("8. Switch to email mode and test ...")
     page.goto(f"{BASE}/link-authentication", wait_until="networkidle")
@@ -54,7 +54,7 @@ with sync_playwright() as p:
     frame.locator(".nexus-link-send-btn").click()
     expect(frame.locator(".nexus-otp-input").first).to_be_visible(timeout=10000)
     expect(frame.locator(".nexus-link-subtitle")).to_contain_text("test@example.com")
-    page.screenshot(path="e2e-link-04-email.png")
+    page.screenshot(path="e2e-screenshots/e2e-link-04-email.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

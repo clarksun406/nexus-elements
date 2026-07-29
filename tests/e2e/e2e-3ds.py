@@ -55,7 +55,7 @@ with sync_playwright() as p:
     assert "支付成功" in result_text, f"Unexpected result: {result_text}"
     assert "3DS 验证通过" in result_text, f"3DS marker missing: {result_text}"
 
-    page.screenshot(path="e2e-3ds-success.png")
+    page.screenshot(path="e2e-screenshots/e2e-3ds-success.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

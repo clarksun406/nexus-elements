@@ -18,7 +18,7 @@ with sync_playwright() as p:
 
     print("1. Navigating to /express-checkout ...")
     page.goto(f"{BASE}/express-checkout", wait_until="networkidle")
-    page.screenshot(path="e2e-ec-01-loaded.png")
+    page.screenshot(path="e2e-screenshots/e2e-ec-01-loaded.png")
 
     print("2. Locating express checkout iframe ...")
     frame = page.frame_locator("iframe[title='Nexus expressCheckout element']")
@@ -45,7 +45,7 @@ with sync_playwright() as p:
     result_text = result_box.inner_text()
     print(f"   Result: {result_text}")
     assert "支付成功" in result_text and "applePay" in result_text, f"Unexpected: {result_text}"
-    page.screenshot(path="e2e-ec-02-success.png")
+    page.screenshot(path="e2e-screenshots/e2e-ec-02-success.png")
 
     print("6. Switching theme to white ...")
     expect(apple_btn).to_have_text("Apple Pay", timeout=5000)
@@ -65,7 +65,7 @@ with sync_playwright() as p:
     expect(container).to_have_attribute("style", re.compile(r"repeat\(2,\s*1fr\)"), timeout=5000)
     print("   grid-template-columns: repeat(2, 1fr)")
 
-    page.screenshot(path="e2e-ec-03-styling.png")
+    page.screenshot(path="e2e-screenshots/e2e-ec-03-styling.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

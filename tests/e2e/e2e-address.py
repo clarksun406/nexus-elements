@@ -17,7 +17,7 @@ with sync_playwright() as p:
 
     print("1. Navigating to /address ...")
     page.goto(f"{BASE}/address", wait_until="networkidle")
-    page.screenshot(path="e2e-address-01-loaded.png")
+    page.screenshot(path="e2e-screenshots/e2e-address-01-loaded.png")
 
     frame = page.frame_locator("iframe[title='Nexus address element']")
     name_input = frame.locator("input.nexus-address-name")
@@ -39,14 +39,14 @@ with sync_playwright() as p:
     error_msg = frame.locator(".nexus-error")
     expect(error_msg).to_be_visible(timeout=5000)
     expect(page.locator(".result-box")).to_contain_text("valid: false", timeout=5000)
-    page.screenshot(path="e2e-address-02-invalid-zip.png")
+    page.screenshot(path="e2e-screenshots/e2e-address-02-invalid-zip.png")
 
     print("4. Valid ZIP completes the address ...")
     postal.fill("10001")
     expect(page.locator(".result-box")).to_contain_text("complete: true", timeout=5000)
     expect(page.locator(".result-box")).to_contain_text('"postal_code": "10001"', timeout=5000)
     expect(page.locator(".result-box")).to_contain_text('"country": "US"', timeout=5000)
-    page.screenshot(path="e2e-address-03-complete.png")
+    page.screenshot(path="e2e-screenshots/e2e-address-03-complete.png")
 
     print("5. Switching country to GB: state becomes text input ...")
     frame.locator("select.nexus-address-country").select_option("GB")
@@ -59,7 +59,7 @@ with sync_playwright() as p:
     page.locator("input[value='billing']").check()
     frame = page.frame_locator("iframe[title='Nexus address element']")
     frame.locator("input.nexus-address-name").wait_for(state="visible", timeout=10000)
-    page.screenshot(path="e2e-address-04-billing.png")
+    page.screenshot(path="e2e-screenshots/e2e-address-04-billing.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

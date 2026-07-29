@@ -18,7 +18,7 @@ with sync_playwright() as p:
 
     print("1. Navigating to /card-combined ...")
     page.goto(f"{BASE}/card-combined", wait_until="networkidle")
-    page.screenshot(path="e2e-01-loaded.png")
+    page.screenshot(path="e2e-screenshots/e2e-01-loaded.png")
     print("   Page loaded.")
 
     # The card element renders inside an iframe
@@ -47,7 +47,7 @@ with sync_playwright() as p:
     postal_input.click()
     postal_input.type("10001", delay=30)
 
-    page.screenshot(path="e2e-02-filled.png")
+    page.screenshot(path="e2e-screenshots/e2e-02-filled.png")
 
     # Verify formatted values inside iframe
     number_val = number_input.input_value()
@@ -70,7 +70,7 @@ with sync_playwright() as p:
     print(f"   Result: {result_text}")
     assert "支付成功" in result_text, f"Unexpected result: {result_text}"
 
-    page.screenshot(path="e2e-03-success.png")
+    page.screenshot(path="e2e-screenshots/e2e-03-success.png")
 
     print("9. Switching theme to night ...")
     page.locator(".theme-btn", has_text="night").click()
@@ -85,7 +85,7 @@ with sync_playwright() as p:
     print(f"   Iframe card border-radius: {radius}")
     assert radius == "2px", f"Flat theme radius not applied: {radius}"
 
-    page.screenshot(path="e2e-04-themes.png")
+    page.screenshot(path="e2e-screenshots/e2e-04-themes.png")
 
     print("11. Testing hidePostalCode toggle ...")
     page.locator("[data-toggle='hidePostalCode']").check()
@@ -94,7 +94,7 @@ with sync_playwright() as p:
     postal_count = postal_inputs.count()
     print(f"   Postal code inputs visible after hidePostalCode: {postal_count}")
     assert postal_count == 0, f"Expected 0 postal inputs with hidePostalCode, got {postal_count}"
-    page.screenshot(path="e2e-05-hide-postal.png")
+    page.screenshot(path="e2e-screenshots/e2e-05-hide-postal.png")
 
     page.locator("[data-toggle='hidePostalCode']").uncheck()
     page.wait_for_timeout(500)
@@ -109,7 +109,7 @@ with sync_playwright() as p:
     is_disabled = disabled_input.is_disabled()
     print(f"   Card number input disabled: {is_disabled}")
     assert is_disabled, "Expected card number input to be disabled"
-    page.screenshot(path="e2e-06-disabled.png")
+    page.screenshot(path="e2e-screenshots/e2e-06-disabled.png")
 
     page.locator("[data-toggle='disabled']").uncheck()
     page.wait_for_timeout(500)
@@ -138,7 +138,7 @@ with sync_playwright() as p:
     number_val = number_input.input_value()
     print(f"   After clear(), number input: '{number_val}'")
     assert number_val == "", f"Expected empty after clear, got '{number_val}'"
-    page.screenshot(path="e2e-07-methods.png")
+    page.screenshot(path="e2e-screenshots/e2e-07-methods.png")
 
     print("14. Verifying event log entries ...")
     event_types = page.locator(".event-type").all_inner_texts()

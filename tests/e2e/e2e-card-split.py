@@ -64,7 +64,7 @@ with sync_playwright() as p:
     assert "支付成功" in result_text, f"Unexpected result: {result_text}"
     assert "visa" in result_text, f"Brand missing from result: {result_text}"
 
-    page.screenshot(path="e2e-split-success.png")
+    page.screenshot(path="e2e-screenshots/e2e-split-success.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

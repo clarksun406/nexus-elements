@@ -17,7 +17,7 @@ with sync_playwright() as p:
 
     print("1. Navigating to /payment-element ...")
     page.goto(f"{BASE}/payment-element", wait_until="networkidle")
-    page.screenshot(path="e2e-pe-01-loaded.png")
+    page.screenshot(path="e2e-screenshots/e2e-pe-01-loaded.png")
 
     print("2. Locating payment iframe (tabs layout default) ...")
     frame = page.frame_locator("iframe[title='Nexus payment element']")
@@ -39,7 +39,7 @@ with sync_playwright() as p:
     number_input.type("4242424242424242", delay=20)
     frame.locator("input.nexus-expiry").type("1228", delay=20)
     frame.locator("input.nexus-cvc").type("123", delay=20)
-    page.screenshot(path="e2e-pe-02-card-filled.png")
+    page.screenshot(path="e2e-screenshots/e2e-pe-02-card-filled.png")
 
     print("4. Pay button enables via change bridge; paying with card ...")
     pay_btn = page.locator("button.btn-pay")
@@ -51,7 +51,7 @@ with sync_playwright() as p:
     result_text = result_box.inner_text()
     print(f"   Result: {result_text}")
     assert "支付成功" in result_text and "card" in result_text and "tabs" in result_text, f"Unexpected: {result_text}"
-    page.screenshot(path="e2e-pe-03-card-success.png")
+    page.screenshot(path="e2e-screenshots/e2e-pe-03-card-success.png")
 
     print("5. Switching layout to accordion ...")
     page.locator(".chip", has_text="accordion").click()
@@ -69,7 +69,7 @@ with sync_playwright() as p:
     expect(bank_select).to_be_visible(timeout=5000)
     bank_select.select_option("ing")
     expect(pay_btn).to_be_enabled(timeout=5000)
-    page.screenshot(path="e2e-pe-04-ideal.png")
+    page.screenshot(path="e2e-screenshots/e2e-pe-04-ideal.png")
 
     print("8. Paying with iDEAL (redirect-method token) ...")
     pay_btn.click()
@@ -77,7 +77,7 @@ with sync_playwright() as p:
     result_text = result_box.inner_text()
     print(f"   Result: {result_text}")
     assert "支付成功" in result_text and "ideal" in result_text, f"Unexpected: {result_text}"
-    page.screenshot(path="e2e-pe-05-ideal-success.png")
+    page.screenshot(path="e2e-screenshots/e2e-pe-05-ideal-success.png")
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")
