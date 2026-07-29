@@ -102,6 +102,7 @@
 |------|--------|------|
 | 生产独立域部署 | P0 | SEC-005：fields 独立域部署（非同源），SEC-006/007 CSP + X-Frame-Options |
 | 应用层加密 | P1 | TOK-002：`/v1/encryption_key` 端到端加密（当前为 stub） |
+| 后端 Mock 模块 | P1 | 本地 Mock Server 模拟 Stripe API（PaymentIntent / SetupIntent / Confirm / 3DS），支持 e2e 脚本与 Storybook 独立测试，无需真实密钥 |
 | 真实品牌图标 | P2 | CE-003：替换文字徽标为 SVG/PNG logo |
 | 字体加载 | P2 | `fonts` 选项：自定义 Web Font 注入 iframe |
 | 更多 locale | P2 | 从 10 种扩展至 23 种（i18n 框架已就绪，仅需翻译） |
