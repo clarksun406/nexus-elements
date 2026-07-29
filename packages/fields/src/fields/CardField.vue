@@ -5,9 +5,11 @@ import { useCardInputs } from '../composables/useCardInputs'
 import { useElementStyle, type ElementStyle } from '../composables/useElementStyle'
 import { getBrandRule } from '../validation/brands'
 import { t } from '../i18n'
+import { getBrandIcon } from '../assets/brand-icons'
 
 const options = ref<Record<string, unknown>>({})
-const focusedField = ref<'number' | 'expiry' | 'cvc' | null>(null)
+const focusedField = ref<'number' | 'expiry' | 'cvc' | 'postal' | null>(null)
+const postalCode = ref('')
 
 const {
   number,
@@ -36,21 +38,41 @@ const elementStyle = computed(() => options.value.style as ElementStyle | undefi
 
 useElementStyle(elementStyle)
 
-watch([isComplete, isEmpty, isValid, brand], () => {
+const showPostalCode = computed(() => options.value.hidePostalCode !== true)
+
+const cardComplete = computed(() => {
+  if (!isComplete.value) return false
+  if (showPostalCode.value && !postalCode.value.trim()) return false
+  return true
+})
+
+const cardValid = computed(() => {
+  if (!isValid.value) return false
+  if (showPostalCode.value && !postalCode.value.trim()) return false
+  return true
+})
+
+const cardEmpty = computed(() => {
+  if (!isEmpty.value) return false
+  if (showPostalCode.value && postalCode.value.trim()) return false
+  return true
+})
+
+watch([cardComplete, cardEmpty, cardValid, brand, postalCode], () => {
   bridge.send('nexus:change', {
-    complete: isComplete.value,
-    empty: isEmpty.value,
-    valid: isValid.value,
+    complete: cardComplete.value,
+    empty: cardEmpty.value,
+    valid: cardValid.value,
     elementType: 'card',
     brand: brand.value,
     error: currentError.value,
     value: {
-      postalCode: '',
+      postalCode: postalCode.value,
     },
   })
 })
 
-const fieldOrder = ['number', 'expiry', 'cvc'] as const
+const fieldOrder = ['number', 'expiry', 'cvc', 'postal'] as const
 
 setNavigationCallback((direction) => {
   const current = focusedField.value
@@ -79,7 +101,11 @@ watch(expiry, (val) => {
   }
 })
 
-function onFocus(field: 'number' | 'expiry' | 'cvc') {
+function onPostalInput(e: Event) {
+  postalCode.value = (e.target as HTMLInputElement).value
+}
+
+function onFocus(field: 'number' | 'expiry' | 'cvc' | 'postal') {
   focusedField.value = field
   bridge.send('nexus:focus-event', {})
 }
@@ -115,12 +141,13 @@ bridge.on('nexus:blur', () => {
 
 bridge.on('nexus:clear', () => {
   clear()
+  postalCode.value = ''
 })
 
 bridge.on('nexus:tokenize', async (message) => {
   const payload = message.payload as { clientSecret: string; billingDetails?: Record<string, unknown> }
 
-  if (!isValid.value || !isComplete.value) {
+  if (!cardValid.value || !cardComplete.value) {
     bridge.send('nexus:token-result', {
       error: {
         type: 'validation_error',
@@ -131,6 +158,7 @@ bridge.on('nexus:tokenize', async (message) => {
   }
 
   try {
+    const billingDetails = payload.billingDetails ?? {}
     const response = await fetch('/v1/tokens', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -142,7 +170,13 @@ bridge.on('nexus:tokenize', async (message) => {
           exp_year: 2000 + parseInt(expiry.value.slice(3, 5), 10),
           cvc: cvc.value,
         },
-        billing_details: payload.billingDetails,
+        billing_details: {
+          ...billingDetails,
+          address: {
+            ...(billingDetails.address as Record<string, unknown> | undefined),
+            postal_code: postalCode.value || undefined,
+          },
+        },
       }),
     })
     const data = await response.json()
@@ -158,12 +192,13 @@ bridge.on('nexus:tokenize', async (message) => {
 
 const showIcon = computed(() => options.value.showIcon !== false && options.value.hideIcon !== true)
 const disabled = computed(() => options.value.disabled === true)
+const brandIconHtml = computed(() => getBrandIcon(brand.value) ?? '💳')
 </script>
 
 <template>
   <div
     class="nexus-card-element"
-    :class="{ 'nexus--focused': focusedField, 'nexus--invalid': currentError, 'nexus--disabled': disabled, 'nexus--empty': isEmpty, 'nexus--complete': isComplete }"
+    :class="{ 'nexus--focused': focusedField, 'nexus--invalid': currentError, 'nexus--disabled': disabled, 'nexus--empty': cardEmpty, 'nexus--complete': cardComplete }"
   >
     <div class="nexus-card-row">
       <input
@@ -183,7 +218,7 @@ const disabled = computed(() => options.value.disabled === true)
         @keydown.esc="onEscape"
         @paste="onPaste"
       />
-      <span v-if="showIcon" class="nexus-brand-icon" :data-brand="brand">{{ brand === 'unknown' ? '💳' : brand }}</span>
+      <span v-if="showIcon" class="nexus-brand-icon" :data-brand="brand" v-html="brandIconHtml"></span>
     </div>
     <div class="nexus-card-row nexus-card-row--split">
       <input
@@ -219,6 +254,21 @@ const disabled = computed(() => options.value.disabled === true)
         @blur="onBlur"
         @keydown.esc="onEscape"
         @paste="onPaste"
+      />
+    </div>
+    <div v-if="showPostalCode" class="nexus-card-row nexus-card-row--postal">
+      <input
+        class="nexus-input nexus-postal"
+        type="text"
+        autocomplete="postal-code"
+        :aria-label="t('postalCode')"
+        :placeholder="t('postalCode')"
+        :value="postalCode"
+        :disabled="disabled"
+        @input="onPostalInput"
+        @focus="onFocus('postal')"
+        @blur="onBlur"
+        @keydown.esc="onEscape"
       />
     </div>
     <p v-if="currentError" class="nexus-error" role="alert" aria-live="polite">
@@ -257,14 +307,30 @@ const disabled = computed(() => options.value.disabled === true)
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 4px 0;
 }
 
 .nexus-card-row--split {
-  margin-top: 8px;
+  margin-top: 0;
+  border-top: 1px solid var(--nexus-color-border, #e0e0e0);
+}
+
+.nexus-card-row--postal {
+  margin-top: 0;
+  border-top: 1px solid var(--nexus-color-border, #e0e0e0);
 }
 
 .nexus-card-row--split .nexus-input {
   flex: 1;
+}
+
+.nexus-card-row--split .nexus-expiry {
+  padding-right: 8px;
+  border-right: 1px solid var(--nexus-color-border, #e0e0e0);
+}
+
+.nexus-card-row--split .nexus-cvc {
+  padding-left: 8px;
 }
 
 .nexus-input {
@@ -278,14 +344,20 @@ const disabled = computed(() => options.value.disabled === true)
 }
 
 .nexus-input::placeholder {
-  color: var(--nexus-color-text-secondary, #8792a2);
+  color: var(--nexus-color-text-placeholder, #8792a2);
 }
 
 .nexus-brand-icon {
+  display: flex;
+  align-items: center;
   font-size: 12px;
-  color: var(--nexus-color-text-secondary, #8792a2);
+  color: var(--nexus-color-icon, #8792a2);
   white-space: nowrap;
-  text-transform: capitalize;
+}
+.nexus-brand-icon svg {
+  width: 32px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .nexus-error {

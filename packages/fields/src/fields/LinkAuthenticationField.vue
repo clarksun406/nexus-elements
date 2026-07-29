@@ -320,7 +320,7 @@ onBeforeUnmount(() => {
 }
 
 .nexus-input::placeholder {
-  color: #8792a2;
+  color: var(--nexus-color-text-placeholder, #8792a2);
 }
 
 .nexus-link-send-btn {

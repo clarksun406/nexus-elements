@@ -19,7 +19,8 @@
 | [Phase 2：聚合支付](#phase-2聚合支付) | ✅ 完成 | Payment Element、Express Checkout、Address、Embedded Checkout |
 | [Phase 3：银行与区域支付](#phase-3银行与区域支付) | ✅ 完成 | 6 种银行组件、Redirect Checkout、银行 E2E |
 | [Phase 4：辅助组件 + 生态](#phase-4辅助组件--生态) | ✅ 完成 | 辅助组件、CDN 加载、i18n（10 locale）、Storybook、Element 级样式、校验器注册表、WCAG、单测 169 |
-| [Phase 5（规划）](#phase-5规划) | ⬜ 未开始 | 生产部署项、真实品牌图标、字体加载、更多 locale |
+| [Phase 5（规划）](#phase-5规划) | 🔶 进行中 | 生产部署项、品牌图标 ✅、字体加载 ✅、locale 扩展 ✅、postal code ✅ |
+| [Phase 6：Appearance API 增强](#phase-6appearance-api-增强) | ✅ 完成 | 变量 14→21 ✅、规则选择器 10→18 ✅、placeholder/icon CSS 变量化 ✅ |
 
 ---
 
@@ -101,12 +102,109 @@
 | 能力 | 优先级 | 说明 |
 |------|--------|------|
 | 生产独立域部署 | P0 | SEC-005：fields 独立域部署（非同源），SEC-006/007 CSP + X-Frame-Options |
-| 应用层加密 | P1 | TOK-002：`/v1/encryption_key` 端到端加密（当前为 stub） |
-| 后端 Mock 模块 | P1 | 本地 Mock Server 模拟 Stripe API（PaymentIntent / SetupIntent / Confirm / 3DS），支持 e2e 脚本与 Storybook 独立测试，无需真实密钥 |
-| 真实品牌图标 | P2 | CE-003：替换文字徽标为 SVG/PNG logo |
-| 字体加载 | P2 | `fonts` 选项：自定义 Web Font 注入 iframe |
-| 更多 locale | P2 | 从 10 种扩展至 23 种（i18n 框架已就绪，仅需翻译） |
-| postal code 字段 | P3 | CE-008：Card 组件内嵌 postal code 输入 |
+| ~~应用层加密~~ | ~~P1~~ ⏸️ | TOK-002：暂缓。iframe 隔离 + TLS 已是行业标准（Stripe/Braintree/Adyen 均如此），客户端加密增加复杂度但安全收益极小，解密密钥仍在服务端。 |
+| 后端 Mock 模块 | P1 ✅ | `@nexus-elements/mock-api` 独立包：Vite 插件 / 独立 HTTP 服务器 / Storybook 集成，MockStore 状态重置，13 路由全覆盖 |
+| 真实品牌图标 | P2 ✅ | CE-003：10 个卡品牌内联 SVG 图标，`v-html` 渲染，💳 未知品牌 fallback |
+| 字体加载 | P2 ✅ | `fonts` 选项：`@font-face` CSS 注入 iframe，`--nexus-font-family` 自动设置 |
+| 更多 locale | P2 ✅ | 从 10 种扩展至 23 种（新增 pl/da/sv/no/fi/ru/ar/hi/th/vi/id/ms/tr） |
+| postal code 字段 | P3 ✅ | CE-008：Card 组件内嵌 postal code 输入，`hidePostalCode` 控制显隐，tokenize 注入 `billing_details.address.postal_code` |
+
+---
+
+## Phase 6：Appearance API 增强 ✅
+
+**目标**：对齐 Stripe Appearance API 全部能力，补齐缺失的变量、规则选择器与 Element 样式属性。
+
+### 当前已有（14 变量 + 10 选择器 + 6 状态样式）
+
+| 类别 | 已实现 |
+|------|--------|
+| 变量 | `colorPrimary` `colorBackground` `colorText` `colorTextSecondary` `colorDanger` `colorSuccess` `colorBorder` `colorBorderFocus` `borderRadius` `fontFamily` `fontSizeBase` `fontSizeSm` `spacingUnit` `gridGutter` |
+| 规则选择器 | `.Input` `.Input--focus` `.Input--error` `.Label` `.Error` `.Tab` `.Tab--selected` `.Block` `.Radio` `.Icon` |
+| Element 样式 | `base` / `empty` / `complete` / `invalid` / `focus` / `disabled` 6 状态，23 属性 |
+
+### 6.1 新增变量（+7）
+
+| 变量 | 说明 | 优先级 |
+|------|------|--------|
+| `colorWarning` | 警告色（Stripe 有，我们仅有 danger/success） | P1 |
+| `colorTextPlaceholder` | 占位符文字色（当前硬编码在各组件 CSS 中） | P1 |
+| `colorIcon` | 图标色（品牌图标、锁图标等） | P2 |
+| `colorIconCheckmark` | 勾选图标色（完成状态的 ✓ 图标） | P2 |
+| `spacingTab` | Tab 组件专用间距 | P2 |
+| `spacingGridRow` | 网格行间距 | P3 |
+| `spacingGridColumn` | 网格列间距 | P3 |
+
+**实现**：
+- `packages/core/src/types/index.ts` — `AppearanceVariables` 接口新增 7 个可选字段
+- `packages/core/src/theme/index.ts` — `VARIABLE_MAP` 新增映射（`--nexus-color-warning` / `--nexus-color-placeholder` / `--nexus-color-icon` / `--nexus-color-icon-checkmark` / `--nexus-spacing-tab` / `--nexus-spacing-grid-row` / `--nexus-spacing-grid-column`）
+- 4 套预设主题中为新增变量补充默认值
+- 各组件 CSS 中将硬编码的 placeholder 色等替换为 `var(--nexus-color-text-placeholder, #8792a2)`
+
+### 6.2 新增规则选择器（+8）
+
+| 选择器 | 说明 | 优先级 |
+|--------|------|--------|
+| `.Input:hover` | 输入框悬停态 | P1 |
+| `.Input--disabled` | 输入框禁用态 | P1 |
+| `.Tab:hover` | Tab 悬停态 | P2 |
+| `.AccordionItem` | 手风琴项 | P2 |
+| `.Checkbox` | 复选框容器 | P2 |
+| `.CheckboxInput` | 复选框输入 | P2 |
+| `.CheckboxInput--checked` | 复选框选中态 | P2 |
+| `.CheckboxInput:focus` | 复选框焦点态 | P2 |
+
+**实现**：
+- `packages/fields/src/appearance.ts` — `RULE_SELECTOR_MAP` 新增 8 个映射
+- 各组件模板中确保对应 CSS class 存在（如 `.nexus-input:hover` 已自然支持，`.nexus--disabled .nexus-input` 已有）
+- `.AccordionItem` 映射到 Payment Element 的 accordion 布局项
+- `.Checkbox` 系列映射到 Payment Element 的 savedPaymentMethods 复选框
+
+### 6.3 Element 样式属性补齐
+
+当前 `ElementStyleState` 已有 23 属性，Stripe 还支持少量额外属性：
+
+| 属性 | 说明 | 优先级 |
+|------|------|--------|
+| `outline` | 焦点轮廓 | P2 |
+| `outlineOffset` | 轮廓偏移 | P3 |
+| `zIndex` | 层级（用于 focus 时提升） | P3 |
+
+**实现**：
+- `packages/fields/src/composables/useElementStyle.ts` — 属性列表已用索引签名 `[key: string]` 兜底，仅需确保 kebab-case 转换覆盖新增属性
+
+### 6.4 主题预设更新
+
+4 套预设主题需为新增变量补充合理默认值：
+
+| 变量 | stripe | flat | night | none |
+|------|--------|------|-------|------|
+| `colorWarning` | `#df1b41` | `#e68600` | `#ff8c5a` | `transparent` |
+| `colorTextPlaceholder` | `#8792a2` | `#8792a2` | `#8c95a8` | `transparent` |
+| `colorIcon` | `#8792a2` | `#8792a2` | `#8c95a8` | `transparent` |
+| `colorIconCheckmark` | `#30b130` | `#0570de` | `#73f0a0` | `transparent` |
+
+### 6.5 示例与 E2E 覆盖 ✅
+
+**新增 `/appearance` 示例页**（Appearance Playground）：
+- 主题切换（4 套预设）
+- 语言切换（8 种 locale）
+- 字体切换（System / Inter / Roboto Mono）
+- 自定义变量（colorPrimary / colorBackground / colorText / colorDanger / borderRadius / fontSizeBase）
+- 规则覆写（8 个选择器开关）
+- Element 级样式（per-element style 开关）
+- API 方法按钮（focus / blur / clear）
+- 实时事件日志（focus / blur / error / escape / click / change）
+
+**增强 `/card-combined` 示例页**：
+- `hidePostalCode` 开关
+- `disabled` 开关
+- `focus()` / `blur()` / `clear()` 方法按钮
+- 事件日志面板
+
+**新增 `e2e-appearance.py`**：覆盖主题/变量/规则/字体/语言/元素样式/方法/事件。
+
+**增强 `e2e-card-combined.py`**：新增 postal code 输入、hidePostalCode 切换、disabled 切换、focus/blur/clear 方法、事件日志验证。
 
 ---
 
@@ -115,7 +213,7 @@
 | 指标 | 当前 | 目标 |
 |------|------|------|
 | 单元测试 | 169 | 维持 > 150 |
-| E2E 脚本 | 18 个 Playwright | 覆盖全部 19 组件 |
+| E2E 脚本 | 19 个 Playwright | 覆盖全部 19 组件 + Appearance API |
 | TypeScript | 4 包 strict 零错误 | 维持 |
 | 包体积 | 66.3 KB gzip | < 80 KB（自动校验） |
 | Storybook | 9 分类 / 60+ 变体 | 维持 |

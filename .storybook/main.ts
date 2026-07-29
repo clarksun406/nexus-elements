@@ -4,6 +4,7 @@ import { readFileSync, existsSync } from 'node:fs'
 import { join, extname } from 'node:path'
 import type { Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { mockApiPlugin } from '@nexus-elements/mock-api'
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html',
@@ -49,8 +50,9 @@ const config: StorybookConfig = {
       ...config.resolve.alias,
       '@nexus-elements/core': resolve(import.meta.dirname, '../packages/core/src/index.ts'),
       '@nexus-elements/vue': resolve(import.meta.dirname, '../packages/vue/src/index.ts'),
+      '@nexus-elements/mock-api': resolve(import.meta.dirname, '../packages/mock-api/src/index.ts'),
     }
-    config.plugins = [vue(), ...(config.plugins ?? []), ...storybookPlugins()]
+    config.plugins = [vue(), ...(config.plugins ?? []), ...storybookPlugins(), mockApiPlugin()]
     return config
   },
 }

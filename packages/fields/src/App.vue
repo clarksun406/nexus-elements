@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { shallowRef, onMounted } from 'vue'
 import { bridge } from './bridge'
-import { applyAppearance } from './appearance'
+import { applyAppearance, applyFonts } from './appearance'
 import { setLocale } from './i18n'
 import type { InitPayload, ResolvedAppearancePayload } from './bridge/types'
 import CardField from './fields/CardField.vue'
@@ -56,6 +56,7 @@ bridge.on('nexus:init', (message) => {
   const payload = message.payload as InitPayload
   setLocale(payload.locale)
   applyAppearance(payload.appearance)
+  applyFonts(payload.fonts)
 })
 
 bridge.on('nexus:appearance', (message) => {

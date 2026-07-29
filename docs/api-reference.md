@@ -174,8 +174,8 @@ await nexus.confirmSetup({ elements, clientSecret, confirmParams: { return_url: 
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `showIcon` / `hideIcon` | `boolean` | 品牌图标（当前为文字徽标） |
-| `hidePostalCode` | `boolean` | postal code 字段本身未实现 ⬜ |
+| `showIcon` / `hideIcon` | `boolean` | 品牌 SVG 图标（10 品牌内联 SVG，💳 fallback） |
+| `hidePostalCode` | `boolean` | 控制 postal code 字段显隐，默认显示（`false`） |
 | `disabled` | `boolean` | 禁用 |
 | `placeholder` | `string` | 卡号占位符 |
 | `style` | `ElementStyle` | 状态级样式对象（`base/empty/focus/invalid/complete/disabled`，见 §6.1） |
@@ -215,22 +215,31 @@ const appearance: Appearance = {
   theme: 'stripe',              // 'stripe' | 'flat' | 'night' | 'none'
   variables: {
     colorPrimary: '#635bff', colorBackground: '#fff', colorText: '#30313d',
-    colorDanger: '#df1b41', borderRadius: '6px', fontFamily: '...',
-    fontSizeBase: '16px', spacingUnit: '4px', /* colorTextSecondary, colorSuccess,
-    colorBorder, colorBorderFocus, fontSizeSm, gridGutter */
+    colorDanger: '#df1b41', colorWarning: '#e68600', colorSuccess: '#30b130',
+    colorTextPlaceholder: '#8792a2', colorIcon: '#8792a2', colorIconCheckmark: '#30b130',
+    colorBorder: '#e0e6ed', colorBorderFocus: '#635bff', colorTextSecondary: '#8898aa',
+    borderRadius: '6px', fontFamily: '...', fontSizeBase: '16px', fontSizeSm: '13px',
+    spacingUnit: '4px', spacingTab: '8px', spacingGridRow: '8px', spacingGridColumn: '8px',
+    gridGutter: '12px',
   },
   rules: {
     '.Input': { borderColor: '#ccc' },
-    '.Input:focus': { boxShadow: '0 0 0 2px #635bff' },
+    '.Input:hover': { borderColor: '#635bff' },
+    '.Input--disabled': { cursor: 'not-allowed' },
     '.Tab--selected': { color: '#635bff' },
-    // 支持 .Input / .Label / .Error / .Tab / .Block / .Radio 等 10 类选择器
+    // 支持 18 类选择器：.Input / .Input:hover / .Input--disabled / .Input--focus /
+    // .Input--error / .Label / .Error / .Tab / .Tab:hover / .Tab--selected /
+    // .Block / .Radio / .Icon / .AccordionItem / .Checkbox / .CheckboxInput /
+    // .CheckboxInput--checked / .CheckboxInput:focus
   },
 }
 ```
 
-- `variables` 映射为 `--nexus-*` CSS 变量注入 iframe
+- `variables`（21 个）映射为 `--nexus-*` CSS 变量注入 iframe
+- `rules`（18 类选择器）映射为内部 CSS class 注入 `<style>` 标签
 - 运行时切换：`elements.update({ appearance })` 热更新，不重建 iframe
 - 底层工具：`resolveAppearance(appearance)`、`THEME_PRESETS` 亦从 core 导出
+- **交互演示**：`/appearance` 示例页提供完整的变量/规则/字体/语言/样式可视化调试
 
 ### 6.1 ElementStyle（元素级状态样式）
 

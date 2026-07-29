@@ -50,6 +50,10 @@ export interface AppearanceVariables {
   colorTextSecondary?: string
   colorDanger?: string
   colorSuccess?: string
+  colorWarning?: string
+  colorTextPlaceholder?: string
+  colorIcon?: string
+  colorIconCheckmark?: string
   colorBorder?: string
   colorBorderFocus?: string
   borderRadius?: string
@@ -57,6 +61,9 @@ export interface AppearanceVariables {
   fontSizeBase?: string
   fontSizeSm?: string
   spacingUnit?: string
+  spacingTab?: string
+  spacingGridRow?: string
+  spacingGridColumn?: string
   gridGutter?: string
 }
 

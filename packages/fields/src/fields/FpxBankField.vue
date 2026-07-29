@@ -157,7 +157,7 @@ const disabled = computed(() => options.value.disabled === true)
   box-shadow: 0 0 0 1px var(--nexus-color-border-focus, #635bff);
 }
 
-.nexus-input::placeholder { color: var(--nexus-color-text-secondary, #8792a2); }
+.nexus-input::placeholder { color: var(--nexus-color-text-placeholder, #8792a2); }
 
 .nexus-bank-list {
   list-style: none;

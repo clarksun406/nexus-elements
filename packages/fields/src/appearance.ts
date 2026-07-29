@@ -2,14 +2,22 @@ import type { ResolvedAppearancePayload } from './bridge/types'
 
 const RULE_SELECTOR_MAP: Record<string, string> = {
   '.Input': '.nexus-input',
+  '.Input:hover': '.nexus-input:hover',
   '.Input--focus': '.nexus--focused .nexus-input, .nexus-input:focus',
   '.Input--error': '.nexus--invalid .nexus-input',
+  '.Input--disabled': '.nexus--disabled .nexus-input',
   '.Label': '.nexus-label',
   '.Error': '.nexus-error',
   '.Tab': '.nexus-tab',
+  '.Tab:hover': '.nexus-tab:hover',
   '.Tab--selected': '.nexus-tab--selected',
   '.Block': '.nexus-block',
+  '.AccordionItem': '.nexus-accordion-item',
   '.Radio': '.nexus-radio',
+  '.Checkbox': '.nexus-checkbox',
+  '.CheckboxInput': '.nexus-checkbox-input',
+  '.CheckboxInput--checked': '.nexus-checkbox-input--checked',
+  '.CheckboxInput:focus': '.nexus-checkbox-input:focus',
   '.Icon': '.nexus-brand-icon',
 }
 
@@ -45,4 +53,40 @@ export function applyAppearance(appearance: ResolvedAppearancePayload): void {
     document.head.appendChild(styleTag)
   }
   styleTag.textContent = css
+}
+
+interface FontDefinition {
+  family: string
+  src: string
+  weight?: string
+  style?: string
+}
+
+const FONT_STYLE_TAG_ID = 'nexus-fonts'
+
+export function applyFonts(fonts: FontDefinition[] | undefined): void {
+  let styleTag = document.getElementById(FONT_STYLE_TAG_ID) as HTMLStyleElement | null
+  if (!fonts || fonts.length === 0) {
+    styleTag?.remove()
+    return
+  }
+
+  let css = ''
+  for (const font of fonts) {
+    const weight = font.weight ?? '400'
+    const style = font.style ?? 'normal'
+    css += `@font-face { font-family: '${font.family}'; src: url('${font.src}'); font-weight: ${weight}; font-style: ${style}; font-display: swap; }\n`
+  }
+
+  if (!styleTag) {
+    styleTag = document.createElement('style')
+    styleTag.id = FONT_STYLE_TAG_ID
+    document.head.appendChild(styleTag)
+  }
+  styleTag.textContent = css
+
+  if (fonts.length > 0) {
+    const primary = fonts[0]!
+    document.documentElement.style.setProperty('--nexus-font-family', `'${primary.family}', sans-serif`)
+  }
 }

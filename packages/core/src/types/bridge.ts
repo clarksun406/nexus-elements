@@ -46,6 +46,7 @@ export interface InitPayload {
   options: Record<string, unknown>
   appearance: ResolvedAppearancePayload
   locale: string
+  fonts?: Array<{ family: string; src: string; weight?: string; style?: string }>
 }
 
 export interface UpdatePayload {

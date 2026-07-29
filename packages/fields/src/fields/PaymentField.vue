@@ -4,6 +4,7 @@ import { bridge } from '../bridge'
 import { useCardInputs } from '../composables/useCardInputs'
 import { getBrandRule } from '../validation/brands'
 import { t } from '../i18n'
+import { getBrandIcon } from '../assets/brand-icons'
 
 type Layout = 'tabs' | 'accordion' | 'radio'
 
@@ -365,6 +366,8 @@ bridge.on('nexus:tokenize', async (message) => {
     bridge.send('nexus:token-result', { error: { type: 'network_error', message: 'A network error occurred.' } })
   }
 })
+
+const brandIconHtml = computed(() => getBrandIcon(brand.value) ?? '💳')
 </script>
 
 <template>
@@ -435,7 +438,7 @@ bridge.on('nexus:tokenize', async (message) => {
               @blur="onBlur"
               @paste="onPaste"
             />
-            <span class="nexus-brand-icon" :data-brand="brand">{{ brand === 'unknown' ? '💳' : brand }}</span>
+            <span class="nexus-brand-icon" :data-brand="brand" v-html="brandIconHtml"></span>
           </div>
           <div class="nexus-field-row nexus-field-row--split">
             <input
@@ -519,7 +522,7 @@ bridge.on('nexus:tokenize', async (message) => {
                 @blur="onBlur"
                 @paste="onPaste"
               />
-              <span class="nexus-brand-icon" :data-brand="brand">{{ brand === 'unknown' ? '💳' : brand }}</span>
+              <span class="nexus-brand-icon" :data-brand="brand" v-html="brandIconHtml"></span>
             </div>
             <div class="nexus-field-row nexus-field-row--split">
               <input
@@ -605,7 +608,7 @@ bridge.on('nexus:tokenize', async (message) => {
                 @blur="onBlur"
                 @paste="onPaste"
               />
-              <span class="nexus-brand-icon" :data-brand="brand">{{ brand === 'unknown' ? '💳' : brand }}</span>
+              <span class="nexus-brand-icon" :data-brand="brand" v-html="brandIconHtml"></span>
             </div>
             <div class="nexus-field-row nexus-field-row--split">
               <input
@@ -818,7 +821,7 @@ select.nexus-input {
 }
 
 .nexus-input::placeholder {
-  color: var(--nexus-color-text-secondary, #8792a2);
+  color: var(--nexus-color-text-placeholder, #8792a2);
 }
 
 .nexus-label {
@@ -827,10 +830,16 @@ select.nexus-input {
 }
 
 .nexus-brand-icon {
+  display: flex;
+  align-items: center;
   font-size: 12px;
-  color: var(--nexus-color-text-secondary, #8792a2);
+  color: var(--nexus-color-icon, #8792a2);
   white-space: nowrap;
-  text-transform: capitalize;
+}
+.nexus-brand-icon svg {
+  width: 32px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .nexus-error {

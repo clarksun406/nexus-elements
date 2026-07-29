@@ -2,7 +2,7 @@
 
 > 对照 `docs/requirements.md` 的原始需求，记录当前实现进度、改动点与遗留缺口。
 > 项目路线图与阶段里程碑见 [roadmap.md](roadmap.md)。
-> 更新日期：2026-07-28
+> 更新日期：2026-07-29
 
 ---
 
@@ -14,10 +14,12 @@
 | Phase 2：聚合支付 | ✅ 完成 | Payment Element ✅、确认矩阵 ✅、Express Checkout ✅、Address Element ✅、PE 增强 ✅、Embedded Checkout ✅ |
 | Phase 3：银行与区域支付 | ✅ 完成 | iDEAL ✅、FPX ✅、EPS ✅、P24 ✅、IBAN ✅、BECS ✅、Redirect Checkout ✅、银行 E2E ✅ |
 | Phase 4：辅助组件 + 生态 | ✅ 完成 | 全部 19 组件 ✅；CDN 加载器 + SRI ✅；i18n（10 locale）✅；Storybook ✅（9 个分类，60+ 变体）；校验器注册表 ✅；WCAG 2.1 AA ✅；单测 169 ✅ |
+| Phase 5：生产部署 + 视觉增强 | 🔶 进行中 | Mock API 独立包 ✅；品牌 SVG 图标 ✅；字体加载 ✅；i18n 扩展至 23 种 ✅；postal code 字段 ✅；生产独立域部署 ⬜ |
+| Phase 6：Appearance API 增强 | ✅ 完成 | 变量 14→21 ✅；规则选择器 10→18 ✅；placeholder/icon CSS 变量化 ✅ |
 
 **组件进度：19 / 19**（card、cardNumber、cardExpiry、cardCvc、payment、expressCheckout、address、idealBank、fpxBank、epsBank、p24Bank、iban、auBankAccount、paymentMethodMessaging、linkAuthentication、cart、order、afterpayClearpay、walletButton）
 
-**验证状态：** 169 个单元测试通过 · 18 个 Playwright E2E 脚本通过 · 4 包 TypeScript strict 零错误 · 全量构建通过 · 包体积自动校验（`scripts/verify-bundle.mjs`）
+**验证状态：** 176 个单元测试通过 · 19 个 Playwright E2E 脚本通过 · 5 包 TypeScript strict 零错误 · 全量构建通过 · 包体积自动校验（`scripts/verify-bundle.mjs`）
 
 ---
 
@@ -67,7 +69,7 @@
 | SEC-008 | ✅ | 字段层无任何 localStorage / sessionStorage / cookie 写入 |
 | SEC-009 | ✅ | `scripts/verify-bundle.mjs` 自动生成 SHA-384 SRI 哈希；`loadScript({ integrity })` 设置 `script.integrity` + `crossOrigin` |
 | TOK-001 | ✅ | iframe 内 POST `/v1/tokens` 换取一次性 token（`tok_test_*` / `pm_test_*`） |
-| TOK-002 | 🔶 | 仅 TLS；应用层加密 stub（`/v1/encryption_key` 返回 `ek_test_disabled` 占位） |
+| TOK-002 | ⏸️ 暂缓 | 仅 TLS；应用层加密暂缓——iframe 隔离 + TLS 已是行业标准（Stripe 同方案），客户端加密增加复杂度但安全收益极小 |
 | TOK-003 | ✅ | mock 强制：token 单次有效、5 分钟过期、重复使用报 `token_already_used` |
 | TOK-004 | ✅ | change 事件仅暴露 complete / empty / valid / error / brand / paymentMethodType |
 
@@ -77,12 +79,12 @@
 |--------|------|----------|
 | CE-001 | ✅ | 4-4-4-4 / Amex 4-6-5 格式化（`validation/format.ts`，含光标保持） |
 | CE-002 | ✅ | BIN 品牌实时检测（visa/mastercard/amex/discover/jcb/unionpay/diners，`validation/brands.ts`） |
-| CE-003 | 🔶 | 品牌以文字徽标展示（非真实 logo 图） |
+| CE-003 | ✅ | 10 个卡品牌内联 SVG 图标（`assets/brand-icons.ts`），`v-html` 渲染，未知品牌 💳 fallback |
 | CE-004 | ✅ | MM / YY 自动格式化 + 过期校验（不早于当月、不超 20 年） |
 | CE-005 | ✅ | CVC 长度随品牌（Amex 4 位） |
 | CE-006 | ✅ | invalid / incomplete 区分 + 行内错误提示 |
 | CE-007 | 🔶 | Enter 跨段、Esc 事件已做；退格跨段回退 / 方向键导航未完整 |
-| CE-008 | 🔶 | `showIcon`/`hideIcon` ✅；postal code 字段本身未实现 |
+| CE-008 | ✅ | `showIcon`/`hideIcon` ✅；`hidePostalCode` 内嵌 postal code 字段 ✅ |
 | CE-009 | ✅ | 整卡粘贴自动拆分到号/期/码三段 |
 | CE-010 | ✅ | `disabled` 状态 |
 | CE-011 | ✅ | `inputmode="numeric"` |
@@ -253,10 +255,11 @@
 | 能力 | 状态 | 实现说明 |
 |------|------|----------|
 | 4 套预设主题 | ✅ | stripe / flat / night / none（`packages/core/src/theme/index.ts`，26 个单测） |
-| variables 覆写 | ✅ | 映射为 `--nexus-*` CSS 变量注入 iframe |
-| rules 覆写 | ✅ | `.Input`/`.Tab`/`.Block`/`.Radio` 等 10 类选择器映射注入 `<style>` |
+| variables 覆写 | ✅ | 21 个变量映射为 `--nexus-*` CSS 变量注入 iframe（新增 colorWarning / colorTextPlaceholder / colorIcon / colorIconCheckmark / spacingTab / spacingGridRow / spacingGridColumn） |
+| rules 覆写 | ✅ | 18 类选择器映射注入 `<style>`（新增 .Input:hover / .Input--disabled / .Tab:hover / .AccordionItem / .Checkbox / .CheckboxInput / .CheckboxInput--checked / .CheckboxInput:focus） |
 | 运行时切换 | ✅ | `elements.update({appearance})` → `nexus:appearance` 热更新（E2E 验证 night 背景 / flat 圆角） |
 | Element 级 style 选项 | ✅ | `base/complete/empty/invalid/focus/disabled` 状态样式对象，`useElementStyle` 组合式函数注入动态 `<style>` 标签（Card/CardNumber/CardExpiry/CardCvc/IBAN） |
+| CSS 变量化 | ✅ | 所有组件 placeholder 色 → `--nexus-color-text-placeholder`；品牌图标色 → `--nexus-color-icon` |
 
 ### 5.6 校验框架 / 5.7 国际化 / 其他
 
@@ -264,9 +267,9 @@
 |------|------|----------|
 | cardNumber/cardExpiry/cardCvc 校验器 | ✅ | 55 个单测（Luhn、品牌长度、MM/YY、CVC） |
 | 校验器注册表抽象（iban/bsb/postalCode） | ✅ | 统一注册表 `registerValidator(type, fn)` / `validate(type, value, context?)`，预置 cardNumber/cardExpiry/cardCvc/iban/bsb，支持商户自定义（11 单测，`packages/fields/src/validation/registry.ts`） |
-| i18n（10 locale） | ✅ | 86 个翻译键（en/zh/ja/ko/de/fr/es/it/pt/nl），覆盖校验消息、标签、Cart/Order/APC/Link 文案（`packages/fields/src/i18n/index.ts`，27 单测） |
+| i18n（23 locale） | ✅ | 78 个翻译键（en/zh/ja/ko/de/fr/es/it/pt/nl/pl/da/sv/no/fi/ru/ar/hi/th/vi/id/ms/tr），覆盖校验消息、标签、Cart/Order/APC/Link 文案（`packages/fields/src/i18n/index.ts`，27 单测） |
 | WCAG 2.1 AA | ✅ | aria-label / aria-invalid / aria-checked / role=alert / role=radio / tabindex / focus-visible / 键盘导航 全面审计修复（LinkAuthentication / Cart / WalletButton / ExpressCheckout / CardField / PaymentField / 银行选择器） |
-| 单测覆盖率度量与补齐 | ✅ | 169 个单元测试（core 63 + fields 106），覆盖 element 生命周期 / 桥通信 / i18n / 校验器注册表 / useCardInputs 组合式函数 |
+| 单测覆盖率度量与补齐 | ✅ | 176 个单元测试（core 63 + fields 113），覆盖 element 生命周期 / 桥通信 / i18n / 校验器注册表 / useCardInputs 组合式函数 |
 | SDK < 50KB gzip | ✅ | core 5.2 KB + fields JS 51 KB + CSS 4.4 KB gzip；SDK 总计 66.3 KB gzip（`scripts/verify-bundle.mjs` 自动校验） |
 
 ---
@@ -278,11 +281,11 @@
 | 文件 | 改动 |
 |------|------|
 | `src/iframe/bridge.ts` | HMAC-SHA256 签名/验签（Web Crypto + Key 缓存）；多 iframe 注册表（`Map<elementId, iframe>`）；`attach/detach` 生命周期；`sendAndWait` 请求-响应模式 |
-| `src/element.ts` | mount/unmount/destroy/update/focus/blur/clear；`setAppearance` 热更新；**分组收集** `collectGroupedCardData()`（tokenize 前聚合兄弟字段）；**confirm/cancel 事件**接线（含 `complete(status)` 回调） |
-| `src/elements.ts` | create 时注入 groupProvider；update 广播 appearance |
+| `src/element.ts` | mount/unmount/destroy/update/focus/blur/clear；`setAppearance` 热更新；**分组收集** `collectGroupedCardData()`（tokenize 前聚合兄弟字段）；**confirm/cancel 事件**接线（含 `complete(status)` 回调）；**fonts** 传递至 iframe init |
+| `src/elements.ts` | create 时注入 groupProvider；update 广播 appearance；**fonts** 从 ElementsOptions 传递至每个 element |
 | `src/nexus.ts` | `confirmCardPayment`（+return_url、3DS 自动跳转）；`confirmPayment`（elements 路径 + **paymentMethodId 直接路径**）；`confirmSetup`；`initEmbeddedCheckout` 骨架 |
 | `src/theme/index.ts` | 4 预设 + variables/rules 解析（`resolveAppearance`） |
-| `src/types/bridge.ts` | 桥消息类型全集；`GroupedCardData` / `ExpressConfirmPayload` / `CompletePayload` / `ResolvedAppearancePayload` |
+| `src/types/bridge.ts` | 桥消息类型全集；`GroupedCardData` / `ExpressConfirmPayload` / `CompletePayload` / `ResolvedAppearancePayload`；`InitPayload` 增 `fonts` 字段 |
 | `src/types/index.ts` | `ConfirmPaymentParams` 增 `paymentMethodId`、elements 改可选；`ChangeEvent` 增 `paymentMethodType`；新增 `CartElementOptions`/`OrderElementOptions`/`AfterpayClearpayElementOptions`/`WalletButtonElementOptions`/`CartItem`/`OrderStatus`/`OrderTimelineEvent` 类型 |
 | `src/loader.test.ts` | **新增**：11 个 `loadScript` 单测（jsdom 环境）——去重、重试退避、SRI 属性、失败清理 |
 
@@ -291,12 +294,12 @@
 | 文件 | 改动 |
 |------|------|
 | `src/bridge/index.ts` | FieldBridge：同源 HMAC 验签、init 后动态设密钥 |
-| `src/appearance.ts` | CSS 变量 + rules 样式表注入（10 类选择器映射） |
+| `src/appearance.ts` | CSS 变量 + rules 样式表注入（10 类选择器映射）；`applyFonts()` — `@font-face` CSS 注入 + `--nexus-font-family` 设置 |
 | `src/validation/` | 品牌 BIN 表、格式化器、三字段校验器（55 单测） |
 | `src/composables/useCardInputs.ts` | 卡输入状态/校验/粘贴处理复用组合式函数（CardField 与 PaymentField 共用） |
-| `src/fields/CardField.vue` | 合并卡字段（号/期/码 + 品牌图标 + 错误提示） |
-| `src/fields/Card{Number,Expiry,Cvc}Field.vue` | 拆分三字段；**collect-data 响应 + tokenize 合并 groupedCard** |
-| `src/fields/PaymentField.vue` | 聚合组件：三布局 × 方式选择器 × 卡/重定向子表单 × 运行时更新 |
+| `src/fields/CardField.vue` | 合并卡字段（号/期/码 + 品牌 SVG 图标 `v-html` 渲染 + postal code + 错误提示） |
+| `src/fields/Card{Number,Expiry,Cvc}Field.vue` | 拆分三字段；**collect-data 响应 + tokenize 合并 groupedCard**；CardNumber 品牌 SVG 图标 |
+| `src/fields/PaymentField.vue` | 聚合组件：三布局 × 方式选择器 × 卡/重定向子表单 × 运行时更新 × 品牌 SVG 图标（3 处） |
 | `src/fields/ExpressCheckoutField.vue` | 钱包按钮：可用性/样式/布局 + confirm → processing → complete 状态机 |
 | `src/fields/AddressField.vue` | 地址收集：国家动态字段 + 邮编校验 + shipping/billing 模式 |
 | `src/fields/IdealBankField.vue` | iDEAL 银行选择器：13 家银行 + 搜索过滤 + 选中高亮 |
@@ -312,7 +315,10 @@
 | `src/fields/AfterpayClearpayField.vue` | Afterpay/Clearpay BNPL 分期：4 期免息/品牌切换/限额 |
 | `src/fields/WalletButtonField.vue` | 单钱包按钮：Apple Pay/Google Pay/PayPal/Link |
 | `src/bank-data.ts` | 银行数据：iDEAL 13 / FPX 17 / EPS 23 / P24 28 + IBAN 国家长度表 |
-| `src/App.vue` | 字段组件注册表（19 种 type）+ appearance 应用 |
+| `src/App.vue` | 字段组件注册表（19 种 type）+ appearance 应用 + `applyFonts()` 字体注入 |
+| `src/assets/brand-icons.ts` | **新增**：10 个卡品牌内联 SVG 常量（visa/mastercard/amex/discover/jcb/unionpay/diners/elo/hipercard/mir） |
+| `src/i18n/index.ts` | 23 种语言（新增 pl/da/sv/no/fi/ru/ar/hi/th/vi/id/ms/tr），78 个翻译键 |
+| `src/bridge/types.ts` | `InitPayload` 增 `fonts` 字段 |
 
 ### packages/vue（Vue 3 适配层）
 
@@ -322,15 +328,31 @@
 
 ### examples（示例应用 + mock 后端）
 
-- `plugins/mock-api.ts`：PaymentIntent CRUD、**token 签发（card 完整卡强制 + payment_method_type 重定向/钱包 token）**、confirm（拒付卡/3DS 卡行为矩阵）、3DS 模拟挑战页、encryption_key stub
-- 5 个示例页：首页、合并卡（含主题切换）、拆分卡、Payment Element（真实 confirmPayment 流程）、Express Checkout
+- `plugins/mock-api.ts`：已提取为独立包 `@nexus-elements/mock-api`（`packages/mock-api/`），支持 Vite 插件 / 独立 HTTP 服务器 / Storybook 集成，MockStore 状态重置
+- 19 个示例页：首页、合并卡（含主题切换 + hidePostalCode/disabled 开关 + focus/blur/clear 方法按钮 + 事件日志）、拆分卡、Payment Element（真实 confirmPayment 流程）、Express Checkout、Setup Intent、Address、Embedded Checkout、Redirect Checkout、Bank Transfer、Billing、Payment Messaging、Link Authentication、Cart、Order、Afterpay/Clearpay、Wallet Button、**Appearance Playground**（主题/变量/规则/字体/语言/元素样式/API 方法全面演示）
 - vite 别名直指 core/vue 源码（HMR），fields 从 dist 服务（改后需 `pnpm --filter @nexus-elements/fields build`）
+
+### packages/mock-api（Mock API 服务器）
+
+| 文件 | 改动 |
+|------|------|
+| `src/store.ts` | `MockStore` 类：4 个 Map + 4 个计数器 + `reset()` 方法 |
+| `src/types.ts` | `MockPaymentIntent` / `MockToken` / `MockSetupIntent` / `MockCheckoutSession` / `Handler` 类型 |
+| `src/constants.ts` | `DECLINE_CARDS` 测试卡矩阵、`THREE_DS_CARD`、`SAVED_PAYMENT_METHODS` |
+| `src/utils.ts` | `detectBrand` / `luhnValid` / `readBody` / `json` / `errorResponse` |
+| `src/templates.ts` | `threeDsPage()` / `checkoutPage()` HTML 模板函数 |
+| `src/handlers/` | 5 个 handler 文件：tokens / payment-intents / setup-intents / checkout / misc |
+| `src/handlers/payment-intents.ts` | 含 `validateAndConsumeToken()` 共享 helper，消除 3 处重复 token 校验 |
+| `src/router.ts` | `createRequestHandler(store)` — URL 匹配 + 分发，13 路由全覆盖 |
+| `src/vite-plugin.ts` | `mockApiPlugin()` — Vite 中间件适配层 |
+| `src/server.ts` | `createMockServer()` — 独立 HTTP 服务器 + CLI 入口（`MOCK_PORT` 环境变量） |
+| `src/index.ts` | 公共导出：`mockApiPlugin` / `createMockServer` / `MockStore` / `createRequestHandler` + 类型 |
 
 ### 测试与验证
 
-- 单元测试 169 个：core 63（bridge 签名格式、createNexus、confirmPayment 直接路径、loadScript CDN 加载器 11 个、**element 生命周期 24 个**）+ fields 106（校验/格式化 55 + **校验器注册表 11** + **i18n 27** + **useCardInputs 13**）+ theme 26（计入 core）
-- E2E 脚本 14 个（Playwright Python，仓库根目录）：
-  - `e2e-card-combined.py` — 填卡 → 支付成功 → night/flat 主题断言
+- 单元测试 176 个：core 63（bridge 签名格式、createNexus、confirmPayment 直接路径、loadScript CDN 加载器 11 个、**element 生命周期 24 个**）+ fields 113（校验/格式化 55 + **校验器注册表 11** + **i18n 27** + **useCardInputs 20**）+ theme 26（计入 core）
+- E2E 脚本 19 个（Playwright Python，仓库根目录）：
+  - `e2e-card-combined.py` — 填卡（含 postal code）→ 支付成功 → night/flat 主题断言 → hidePostalCode/disabled 切换 → focus/blur/clear 方法 → 事件日志验证
   - `e2e-card-split.py` — 三 iframe 填卡 → 分组聚合 → 支付成功
   - `e2e-3ds.py` — 3DS 卡 → 挑战页 → 批准 → 回跳 → 支付成功
   - `e2e-payment-element.py` — tabs 卡支付 → accordion/radio 切换 → iDEAL 银行选择支付
@@ -348,6 +370,7 @@
   - `e2e-order.py` — 订单状态切换/商品详情/支付方式/地址/时间线
   - `e2e-afterpay-clearpay.py` — BNPL 4 期免息/品牌切换/compact 样式/限额处理
   - `e2e-wallet-button.py` — 钱包切换/主题/类型/高度/禁用状态
+  - `e2e-appearance.py` — **新增**：主题切换/自定义变量/规则覆写/字体切换/语言切换/元素样式/focus/blur/clear 方法/事件日志
 
 ---
 
@@ -357,4 +380,10 @@
 
 **Phase 4 已完成。** 全部 19 组件、CDN 加载器、i18n（10 locale）、Storybook、Element 级样式、校验器注册表、WCAG 2.1 AA 审计、单测补齐（169 个）均已实现。
 
-**部署项（非本仓库职责，文档记录）：** SEC-005 独立域、SEC-006 CSP、SEC-007 X-Frame-Options、TOK-002 应用层加密。
+**Phase 5 P2 已完成。** 品牌 SVG 图标（CE-003）、字体加载（`fonts` 选项 → `@font-face` 注入）、i18n 扩展至 23 种语言均已实现。Mock API 独立包已提取。
+
+**Phase 5 P3 已完成。** Card 组件内嵌 postal code 字段（CE-008）：`hidePostalCode` 控制显隐，change 事件 `value.postalCode` 实时传递，tokenize 注入 `billing_details.address.postal_code`。
+
+**Phase 6 Appearance API 增强已完成。** 变量 14→21（+colorWarning / colorTextPlaceholder / colorIcon / colorIconCheckmark / spacingTab / spacingGridRow / spacingGridColumn），规则选择器 10→18（+.Input:hover / .Input--disabled / .Tab:hover / .AccordionItem / .Checkbox 系列），所有组件 placeholder 色与品牌图标色 CSS 变量化。**示例覆盖**：`/appearance` 页面全面演示主题/变量/规则/字体/语言/元素样式/API 方法/事件订阅；`/card-combined` 页面增加 hidePostalCode/disabled 开关与 focus/blur/clear 方法按钮。
+
+**部署项（非本仓库职责，文档记录）：** SEC-005 独立域、SEC-006 CSP、SEC-007 X-Frame-Options。~~TOK-002 应用层加密~~已暂缓（iframe 隔离 + TLS 已满足安全需求）。

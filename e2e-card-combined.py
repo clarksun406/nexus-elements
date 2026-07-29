@@ -42,6 +42,11 @@ with sync_playwright() as p:
     cvc_input.click()
     cvc_input.type("123", delay=30)
 
+    print("5b. Typing postal code 10001 ...")
+    postal_input = frame_locator.locator("input.nexus-postal")
+    postal_input.click()
+    postal_input.type("10001", delay=30)
+
     page.screenshot(path="e2e-02-filled.png")
 
     # Verify formatted values inside iframe
@@ -81,6 +86,67 @@ with sync_playwright() as p:
     assert radius == "2px", f"Flat theme radius not applied: {radius}"
 
     page.screenshot(path="e2e-04-themes.png")
+
+    print("11. Testing hidePostalCode toggle ...")
+    page.locator("[data-toggle='hidePostalCode']").check()
+    page.wait_for_timeout(500)
+    postal_inputs = frame_locator.locator("input.nexus-postal")
+    postal_count = postal_inputs.count()
+    print(f"   Postal code inputs visible after hidePostalCode: {postal_count}")
+    assert postal_count == 0, f"Expected 0 postal inputs with hidePostalCode, got {postal_count}"
+    page.screenshot(path="e2e-05-hide-postal.png")
+
+    page.locator("[data-toggle='hidePostalCode']").uncheck()
+    page.wait_for_timeout(500)
+    postal_count = frame_locator.locator("input.nexus-postal").count()
+    print(f"   Postal code inputs after re-show: {postal_count}")
+    assert postal_count == 1, f"Expected 1 postal input after uncheck, got {postal_count}"
+
+    print("12. Testing disabled toggle ...")
+    page.locator("[data-toggle='disabled']").check()
+    page.wait_for_timeout(500)
+    disabled_input = frame_locator.locator("input.nexus-number")
+    is_disabled = disabled_input.is_disabled()
+    print(f"   Card number input disabled: {is_disabled}")
+    assert is_disabled, "Expected card number input to be disabled"
+    page.screenshot(path="e2e-06-disabled.png")
+
+    page.locator("[data-toggle='disabled']").uncheck()
+    page.wait_for_timeout(500)
+    is_disabled = frame_locator.locator("input.nexus-number").is_disabled()
+    print(f"   Card number input after re-enable: disabled={is_disabled}")
+    assert not is_disabled, "Expected card number input to be enabled"
+
+    print("13. Testing element methods (focus/blur/clear) ...")
+    number_input = frame_locator.locator("input.nexus-number")
+    number_input.click()
+    number_input.type("4242424242424242", delay=20)
+    page.wait_for_timeout(300)
+
+    page.locator(".method-btn[data-method='blur']").click()
+    page.wait_for_timeout(300)
+    page.locator(".method-btn[data-method='focus']").click()
+    page.wait_for_timeout(300)
+
+    event_entries = page.locator(".event-entry")
+    event_count = event_entries.count()
+    print(f"   Event log entries after focus/blur: {event_count}")
+    assert event_count >= 2, f"Expected at least 2 events, got {event_count}"
+
+    page.locator(".method-btn[data-method='clear']").click()
+    page.wait_for_timeout(500)
+    number_val = number_input.input_value()
+    print(f"   After clear(), number input: '{number_val}'")
+    assert number_val == "", f"Expected empty after clear, got '{number_val}'"
+    page.screenshot(path="e2e-07-methods.png")
+
+    print("14. Verifying event log entries ...")
+    event_types = page.locator(".event-type").all_inner_texts()
+    print(f"   Event types: {event_types[:10]}")
+    has_focus = any("focus" in t for t in event_types)
+    has_blur = any("blur" in t for t in event_types)
+    assert has_focus, "Expected focus event in log"
+    assert has_blur, "Expected blur event in log"
 
     if console_errors:
         print(f"\n   Console errors ({len(console_errors)}):")

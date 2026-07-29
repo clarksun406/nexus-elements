@@ -46,7 +46,7 @@ describe('resolveAppearance', () => {
   it('every preset resolves a full variable set', () => {
     for (const theme of Object.keys(THEME_PRESETS)) {
       const resolved = resolveAppearance({ theme: theme as keyof typeof THEME_PRESETS })
-      expect(Object.keys(resolved.variables)).toHaveLength(14)
+      expect(Object.keys(resolved.variables)).toHaveLength(21)
     }
   })
 })

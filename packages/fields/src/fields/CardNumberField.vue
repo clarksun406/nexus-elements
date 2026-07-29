@@ -7,6 +7,7 @@ import { t, validationMessages } from '../i18n'
 import { useElementStyle, type ElementStyle } from '../composables/useElementStyle'
 import type { CardBrand } from '../validation/brands'
 import type { GroupedCardData } from '../bridge/types'
+import { getBrandIcon } from '../assets/brand-icons'
 
 const options = ref<Record<string, unknown>>({})
 const value = ref('')
@@ -106,6 +107,7 @@ bridge.on('nexus:tokenize', async (message) => {
 
 const showIcon = computed(() => options.value.showIcon === true)
 const disabled = computed(() => options.value.disabled === true)
+const brandIconHtml = computed(() => getBrandIcon(brand.value) ?? '💳')
 </script>
 
 <template>
@@ -128,7 +130,7 @@ const disabled = computed(() => options.value.disabled === true)
       @blur="focused = false; bridge.send('nexus:blur-event', {})"
       @keydown.esc="bridge.send('nexus:escape', {})"
     />
-    <span v-if="showIcon" class="nexus-brand-icon" :data-brand="brand">{{ brand === 'unknown' ? '💳' : brand }}</span>
+    <span v-if="showIcon" class="nexus-brand-icon" :data-brand="brand" v-html="brandIconHtml"></span>
   </div>
 </template>
 
@@ -172,13 +174,19 @@ const disabled = computed(() => options.value.disabled === true)
 }
 
 .nexus-input::placeholder {
-  color: var(--nexus-color-text-secondary, #8792a2);
+  color: var(--nexus-color-text-placeholder, #8792a2);
 }
 
 .nexus-brand-icon {
+  display: flex;
+  align-items: center;
   font-size: 12px;
-  color: var(--nexus-color-text-secondary, #8792a2);
+  color: var(--nexus-color-icon, #8792a2);
   white-space: nowrap;
-  text-transform: capitalize;
+}
+.nexus-brand-icon svg {
+  width: 32px;
+  height: 20px;
+  flex-shrink: 0;
 }
 </style>

@@ -93,5 +93,10 @@ export const router = createRouter({
       name: 'wallet-button',
       component: () => import('../views/WalletButtonView.vue'),
     },
+    {
+      path: '/appearance',
+      name: 'appearance',
+      component: () => import('../views/AppearanceView.vue'),
+    },
   ],
 })

@@ -29,6 +29,7 @@ export class NexusElements {
       appearance: this.options.appearance ?? null,
       locale: this.options.locale ?? 'en',
       fieldsUrl: this.fieldsUrl,
+      fonts: this.options.fonts,
     })
     this.elements.set(id, element)
     element.setGroupProvider(() => [...this.elements.values()])

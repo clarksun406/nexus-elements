@@ -59,6 +59,9 @@ importers:
       '@nexus-elements/core':
         specifier: workspace:*
         version: link:../packages/core
+      '@nexus-elements/mock-api':
+        specifier: workspace:*
+        version: link:../packages/mock-api
       '@nexus-elements/vue':
         specifier: workspace:*
         version: link:../packages/vue
@@ -124,6 +127,15 @@ importers:
       vue-tsc:
         specifier: ^2.2.0
         version: 2.2.12(typescript@5.9.3)
+
+  packages/mock-api:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.3(@types/node@22.20.1)
 
   packages/vue:
     dependencies:

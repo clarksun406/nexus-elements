@@ -23,6 +23,7 @@ const demos: DemoItem[] = [
   { name: '订单详情 Order Element', path: '/order', description: '订单状态 / 商品 / 时间线', status: 'ready' },
   { name: 'Afterpay/Clearpay', path: '/afterpay-clearpay', description: 'BNPL 4 期免息 · 地区品牌切换', status: 'ready' },
   { name: 'Wallet Button', path: '/wallet-button', description: '单钱包按钮 · 主题/类型切换', status: 'ready' },
+  { name: 'Appearance Playground', path: '/appearance', description: '主题/变量/规则/字体/语言/元素样式/API方法', status: 'ready' },
 ]
 </script>
 

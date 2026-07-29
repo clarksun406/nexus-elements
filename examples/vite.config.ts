@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'node:path'
 import { fieldsServerPlugin } from './plugins/fields-server'
-import { mockApiPlugin } from './plugins/mock-api'
+import { mockApiPlugin } from '@nexus-elements/mock-api'
 
 export default defineConfig({
   plugins: [vue(), mockApiPlugin(), fieldsServerPlugin()],

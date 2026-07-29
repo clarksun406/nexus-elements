@@ -162,6 +162,6 @@ const disabled = computed(() => options.value.disabled === true)
 }
 
 .nexus-input::placeholder {
-  color: var(--nexus-color-text-secondary, #8792a2);
+  color: var(--nexus-color-text-placeholder, #8792a2);
 }
 </style>

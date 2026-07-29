@@ -24,6 +24,7 @@ export class NexusElement {
   private destroyed = false
   private groupProvider: (() => NexusElement[]) | null = null
   private lastPropagatedBrand: string | null = null
+  private fonts?: Array<{ family: string; src: string; weight?: string; style?: string }>
 
   constructor(params: {
     id: string
@@ -34,6 +35,7 @@ export class NexusElement {
     appearance: Appearance | null
     locale: string
     fieldsUrl?: string
+    fonts?: Array<{ family: string; src: string; weight?: string; style?: string }>
   }) {
     this.id = params.id
     this.type = params.type
@@ -43,6 +45,7 @@ export class NexusElement {
     this.appearance = params.appearance
     this.locale = params.locale
     this.fieldsUrl = params.fieldsUrl
+    this.fonts = params.fonts
 
     this.bridge.on('nexus:ready', this.id, (msg: BridgeMessage) => {
       const payload = msg.payload as ReadyPayload
@@ -104,6 +107,7 @@ export class NexusElement {
         options: this.options,
         appearance: resolveAppearance(this.appearance),
         locale: this.locale,
+        fonts: this.fonts,
       },
     )
     container.appendChild(this.iframe)
