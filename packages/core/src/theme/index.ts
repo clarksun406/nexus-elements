@@ -122,6 +122,8 @@ const VARIABLE_MAP: Record<keyof AppearanceVariables, string> = {
   spacingGridRow: '--nexus-spacing-grid-row',
   spacingGridColumn: '--nexus-spacing-grid-column',
   gridGutter: '--nexus-grid-gutter',
+  outline: '--nexus-outline',
+  zIndex: '--nexus-z-index',
 }
 
 export function resolveAppearance(appearance: Appearance | null | undefined): ResolvedAppearance {

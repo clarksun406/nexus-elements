@@ -2,7 +2,28 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { loadScript } from './loader'
+import { loadNexus, loadScript } from './loader'
+
+describe('loadNexus', () => {
+  it('constructs from the already loaded module when no CDN script is requested', async () => {
+    const nexus = await loadNexus('pk_test_from_package', { apiBase: 'https://api.test', nexusAccount: 'acct' })
+    expect(nexus.publishableKey).toBe('pk_test_from_package')
+    expect(nexus.elements().getClientSecret()).toBeUndefined()
+  })
+
+  it('uses the global factory after the CDN script loads', async () => {
+    const created = { publishableKey: 'pk_test_global' }
+    ;(window as unknown as { Nexus: { createNexus: () => unknown } }).Nexus = {
+      createNexus: () => created,
+    }
+    const script = document.createElement('script')
+    script.src = 'https://cdn.test/nexus.js'
+    document.head.appendChild(script)
+    const pending = loadNexus('pk_test_global', { scriptUrl: 'https://cdn.test/nexus.js' })
+    script.dispatchEvent(new Event('load'))
+    await expect(pending).resolves.toBe(created)
+  })
+})
 
 describe('loadScript', () => {
   beforeEach(() => {

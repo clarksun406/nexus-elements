@@ -1,7 +1,7 @@
 export { NexusKey } from './context'
 export type { NexusContext } from './context'
 
-export { useNexus, useElements, useElement, useNexusInstance } from './composables'
+export { useNexus, useElements, useElement, useNexusInstance, useConfirm } from './composables'
 
 export { NexusVuePlugin } from './plugin'
 export type { NexusVuePluginOptions } from './plugin'

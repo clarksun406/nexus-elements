@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { NexusElements, NexusCardElement } from '@nexus-elements/vue'
-import { createNexus } from '@nexus-elements/core'
 import type {
   Appearance,
   AppearanceVariables,
@@ -11,7 +10,6 @@ import type {
 } from '@nexus-elements/core'
 
 const PUBLISHABLE_KEY = 'pk_test_nexus_example_key'
-const nexus = createNexus(PUBLISHABLE_KEY)
 
 const THEMES: NonNullable<Appearance['theme']>[] = ['stripe', 'flat', 'night', 'none']
 const theme = ref<NonNullable<Appearance['theme']>>('stripe')
@@ -80,8 +78,9 @@ const fontIndex = ref(0)
 
 const fonts = computed(() => {
   const preset = FONT_PRESETS[fontIndex.value]
-  if (!preset.src) return undefined
-  return [{ family: preset.family.split(',')[0].replace(/"/g, ''), src: `url("${preset.src}") format("woff2")` }]
+  if (!preset?.src) return undefined
+  const family = preset.family.split(',')[0]?.replace(/"/g, '') ?? preset.family
+  return [{ family, src: `url("${preset.src}") format("woff2")` }]
 })
 
 const elementStyle = reactive<ElementStyle>({
@@ -237,7 +236,7 @@ function clearLog() { eventLog.value = [] }
           <section class="control-section">
             <h3>Rules Override</h3>
             <div class="rules-list">
-              <label v-for="(val, key) in rulePresets" :key="key" class="rule-item">
+              <label v-for="(_val, key) in rulePresets" :key="key" class="rule-item">
                 <input v-model="rulePresets[key]" type="checkbox" />
                 <code>{{ key }}</code>
               </label>

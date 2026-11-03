@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { bridge } from '../bridge'
+import { publishTokenResult } from '../api/token'
 import { t } from '../i18n'
 import { validateBsb } from '../validation'
 import { formatBsb } from '../validation/format'
@@ -52,8 +53,8 @@ watch([isComplete, isEmpty, isValid, bsbError, accountError], () => {
         ? { type: 'validation_error', code: 'incomplete_account', message: accountError.value.message }
         : undefined,
     value: {
-      bsb: bsbDigits.value,
-      account_number: accountNumber.value.replace(/\D/g, ''),
+      bsbLast3: bsbDigits.value.slice(-3),
+      accountLast4: accountNumber.value.replace(/\D/g, '').slice(-4),
       account_holder_name: accountName.value.trim() || undefined,
       email: email.value.trim() || undefined,
     },
@@ -87,7 +88,7 @@ bridge.on('nexus:clear', () => {
   touched.value = {}
 })
 
-bridge.on('nexus:tokenize', () => {
+bridge.on('nexus:tokenize', async () => {
   if (!isValid.value) {
     bridge.send('nexus:token-result', {
       error: bsbError.value
@@ -96,18 +97,8 @@ bridge.on('nexus:tokenize', () => {
     })
     return
   }
-  bridge.send('nexus:token-result', {
-    token: `tok_test_au_bsb${bsbDigits.value}`,
-    paymentMethodType: 'au_becs_debit',
-    au_becs_debit: {
-      bsb: bsbDigits.value,
-      account_number: accountNumber.value.replace(/\D/g, ''),
-    },
-  })
-})
-
-bridge.on('nexus:collect-data', () => {
-  bridge.send('nexus:collect-result', {
+  await publishTokenResult({
+    payment_method_type: 'au_becs_debit',
     au_becs_debit: {
       bsb: bsbDigits.value,
       account_number: accountNumber.value.replace(/\D/g, ''),
@@ -200,8 +191,8 @@ const disabled = computed(() => options.value.disabled === true)
       />
     </label>
 
-    <p v-if="bsbError" class="nexus-error" role="alert">{{ bsbError.message }}</p>
-    <p v-if="accountError" class="nexus-error" role="alert">{{ accountError.message }}</p>
+    <p v-if="bsbError" class="nexus-error" role="alert" aria-live="polite">{{ bsbError.message }}</p>
+    <p v-if="accountError" class="nexus-error" role="alert" aria-live="polite">{{ accountError.message }}</p>
   </div>
 </template>
 

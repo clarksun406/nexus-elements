@@ -13,13 +13,15 @@
       "require": "./dist/nexus-vue.cjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build && vue-tsc --emitDeclarationOnly --outDir dist",
     "typecheck": "vue-tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
     "@nexus-elements/core": "workspace:*"
@@ -29,6 +31,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.0",
+    "@vue/test-utils": "^2.5.1",
+    "jsdom": "^30.0.0",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
     "vitest": "^3.0.0",

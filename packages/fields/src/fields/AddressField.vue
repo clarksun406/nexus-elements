@@ -322,7 +322,7 @@ const disabled = computed(() => options.value.disabled === true)
       />
     </label>
 
-    <p v-if="postalError && touched" class="nexus-error" role="alert">{{ t('postalInvalid') }}</p>
+    <p v-if="postalError && touched" class="nexus-error" role="alert" aria-live="polite">{{ t('postalInvalid') }}</p>
   </div>
 </template>
 

@@ -194,7 +194,7 @@ onBeforeUnmount(() => {
         {{ sending ? '发送中...' : '发送验证码' }}
       </button>
 
-      <p v-if="error" class="nexus-error" role="alert">{{ error }}</p>
+      <p v-if="error" class="nexus-error" role="alert" aria-live="polite">{{ error }}</p>
     </div>
 
     <!-- Step 2: OTP verification -->
@@ -232,7 +232,7 @@ onBeforeUnmount(() => {
         <button class="nexus-link-text-btn" @click="backToContact">&larr; 更换{{ mode === 'phone' ? '手机号' : '邮箱' }}</button>
       </div>
 
-      <p v-if="error" class="nexus-error" role="alert">{{ error }}</p>
+      <p v-if="error" class="nexus-error" role="alert" aria-live="polite">{{ error }}</p>
     </div>
 
     <!-- Step 3: Verified -->

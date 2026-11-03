@@ -223,7 +223,7 @@ bridge.on('nexus:clear', () => {
           <input v-model="promoCode" type="text" placeholder="输入优惠码" aria-label="优惠码" class="nexus-cart-promo-field" @keyup.enter="applyPromo" />
           <button class="nexus-cart-promo-btn" @click="applyPromo">应用</button>
         </div>
-        <p v-if="promoError" class="nexus-cart-promo-error" role="alert">{{ promoError }}</p>
+        <p v-if="promoError" class="nexus-cart-promo-error" role="alert" aria-live="polite">{{ promoError }}</p>
       </div>
 
       <div class="nexus-cart-summary">

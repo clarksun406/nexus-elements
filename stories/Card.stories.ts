@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
+import { expect, within } from 'storybook/test'
 import { h, ref } from 'vue'
 import { NexusElements, NexusCardElement } from '@nexus-elements/vue'
 
@@ -26,6 +27,10 @@ export const Default: Story = {
       return () => h(NexusCardElement)
     },
   }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByTitle(/Nexus card element/i)).toBeVisible()
+  },
 }
 
 export const WithPlaceholder: Story = {

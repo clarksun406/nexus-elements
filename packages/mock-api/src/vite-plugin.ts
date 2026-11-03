@@ -1,6 +1,7 @@
 import type { Plugin } from 'vite'
 import { MockStore } from './store.js'
 import { createRequestHandler } from './router.js'
+import { isCheckoutPath } from './security.js'
 
 export function mockApiPlugin(): Plugin {
   const store = new MockStore()
@@ -14,7 +15,7 @@ export function mockApiPlugin(): Plugin {
         if (
           url === '/3ds-mock' ||
           url === '/v1/3ds/complete' ||
-          url === '/__nexus-checkout' ||
+          isCheckoutPath(url) ||
           url === '/__mock/reset' ||
           url.startsWith('/v1')
         ) {

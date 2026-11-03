@@ -117,8 +117,8 @@ export function checkoutPage(): string {
     payBtn.disabled = true
     payBtn.textContent = '处理中...'
 
-    var number = document.getElementById('cs-number').value.replace(/\\\\D/g, '')
-    var expiry = document.getElementById('cs-expiry').value.replace(/\\\\D/g, '')
+    var number = document.getElementById('cs-number').value.replace(/\\D/g, '')
+    var expiry = document.getElementById('cs-expiry').value.replace(/\\D/g, '')
     var cvc = document.getElementById('cs-cvc').value.trim()
     var expMonth = parseInt(expiry.slice(0, 2), 10)
     var expYear = 2000 + parseInt(expiry.slice(2, 4), 10)
@@ -149,7 +149,12 @@ export function checkoutPage(): string {
           window.parent.postMessage({ type: 'nexus:checkout-complete', session: { id: session.id, status: session.status, payment_intent: session.payment_intent } }, location.origin)
         }
         if (session.ui_mode === 'redirect' && session.success_url) {
-          window.top.location.href = session.success_url.replace('{SESSION_ID}', session.id)
+          var dest = session.success_url.replace('{SESSION_ID}', session.id)
+          if (window.parent !== window) {
+            window.parent.postMessage({ type: 'nexus:checkout-redirect', url: dest }, location.origin)
+          } else {
+            window.location.href = dest
+          }
         }
       })
       .catch(function (err) {

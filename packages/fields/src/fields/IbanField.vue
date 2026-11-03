@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { bridge } from '../bridge'
+import { publishTokenResult } from '../api/token'
 import { t } from '../i18n'
 import { validateIban } from '../validation'
 import { formatIban } from '../validation/format'
@@ -57,7 +58,7 @@ watch([isComplete, isEmpty, isValid, ibanError, compact], () => {
     error: ibanError.value
       ? { type: 'validation_error', code: ibanError.value.type === 'mod97' ? 'invalid_iban' : 'incomplete_iban', message: ibanError.value.message }
       : undefined,
-    value: compact.value ? { iban: compact.value, country: detectedCountry.value } : undefined,
+    value: compact.value ? { country: detectedCountry.value, last4: compact.value.slice(-4) } : undefined,
   })
 })
 
@@ -86,7 +87,7 @@ bridge.on('nexus:clear', () => {
   touched.value = false
 })
 
-bridge.on('nexus:tokenize', () => {
+bridge.on('nexus:tokenize', async () => {
   if (!isValid.value) {
     bridge.send('nexus:token-result', {
       error: ibanError.value
@@ -95,15 +96,10 @@ bridge.on('nexus:tokenize', () => {
     })
     return
   }
-  bridge.send('nexus:token-result', {
-    token: `tok_test_iban_${compact.value.slice(0, 8)}`,
-    paymentMethodType: 'iban',
+  await publishTokenResult({
+    payment_method_type: 'iban',
     iban: { iban: compact.value, country: detectedCountry.value },
   })
-})
-
-bridge.on('nexus:collect-data', () => {
-  bridge.send('nexus:collect-result', { iban: { iban: compact.value, country: detectedCountry.value } })
 })
 
 function onInput(event: Event) {
@@ -156,7 +152,7 @@ const disabled = computed(() => options.value.disabled === true)
       />
     </label>
 
-    <p v-if="ibanError" class="nexus-error" role="alert">{{ ibanError.message }}</p>
+    <p v-if="ibanError" class="nexus-error" role="alert" aria-live="polite">{{ ibanError.message }}</p>
   </div>
 </template>
 

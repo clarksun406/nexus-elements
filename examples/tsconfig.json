@@ -3,7 +3,13 @@
   "compilerOptions": {
     "jsx": "preserve",
     "jsxImportSource": "vue",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@nexus-elements/core": ["../packages/core/src/index.ts"],
+      "@nexus-elements/vue": ["../packages/vue/src/index.ts"],
+      "@nexus-elements/mock-api": ["../packages/mock-api/src/index.ts"]
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.vue"]
 }

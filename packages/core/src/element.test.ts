@@ -214,6 +214,32 @@ describe('NexusElement', () => {
       expect(bridge.send).toHaveBeenCalledWith('nexus:clear', 'el_1', {})
     })
 
+    it('collapse() and fetchUpdates() address the mounted frame', async () => {
+      const { element, bridge } = createElement()
+      element.collapse()
+      await element.fetchUpdates()
+      expect(bridge.send).not.toHaveBeenCalledWith('nexus:fetch-updates', 'el_1', {})
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      element.mount(container)
+      element.collapse()
+      await element.fetchUpdates()
+      expect(bridge.send).toHaveBeenCalledWith('nexus:collapse', 'el_1', {})
+      expect(bridge.send).toHaveBeenCalledWith('nexus:fetch-updates', 'el_1', {})
+    })
+
+    it('emits loaderror for frame failures and error payloads', () => {
+      const { element, bridge } = createElement()
+      const handler = vi.fn()
+      element.on('loaderror', handler)
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      element.mount(container)
+      container.querySelector('iframe')!.dispatchEvent(new Event('error'))
+      bridge._trigger('nexus:error', 'el_1', { type: 'loaderror', message: 'nope' })
+      expect(handler).toHaveBeenCalled()
+    })
+
     it('update() merges options and sends nexus:update when mounted', async () => {
       const { element, bridge } = createElement()
       const container = document.createElement('div')

@@ -2,6 +2,7 @@ import type { MockStore } from '../store.js'
 import { SAVED_PAYMENT_METHODS } from '../constants.js'
 import { json } from '../utils.js'
 import type { ServerResponse } from 'node:http'
+import { getEncryptionKey } from '../crypto.js'
 
 export function handleComplete3ds(store: MockStore, res: ServerResponse, body: Record<string, unknown>): void {
   const intent = store.intents.get(body.intent as string)
@@ -16,11 +17,32 @@ export function handleGetPaymentMethods(res: ServerResponse): void {
 }
 
 export function handleGetEncryptionKey(res: ServerResponse): void {
-  json(res, 200, {
-    key_id: 'ek_test_disabled',
-    algorithm: 'none',
-    public_key_pem: null,
-    expires_at: Math.floor(Date.now() / 1000) + 86400,
-    note: 'Phase 1: TLS-only encryption. Application-layer encryption will be enabled in a future phase.',
+  json(res, 200, getEncryptionKey())
+}
+
+const orders = new Map<string, Record<string, unknown>>()
+
+export function handleGetOrder(res: ServerResponse, orderId: string): void {
+  const order = orders.get(orderId)
+  if (!order) {
+    json(res, 404, { error: { type: 'api_error', code: 'resource_missing', message: '未找到订单。' } })
+    return
+  }
+  json(res, 200, { order })
+}
+
+export function handleUpsertOrder(res: ServerResponse, orderId: string, body: Record<string, unknown>): void {
+  const order = { id: orderId, status: body.status ?? 'pending', ...body }
+  orders.set(orderId, order)
+  json(res, 200, { order })
+}
+
+export function handleApplePaySession(res: ServerResponse): void {
+  json(res, 501, {
+    error: {
+      type: 'api_error',
+      code: 'apple_pay_unavailable',
+      message: 'Apple Pay merchant validation is not configured. The wallet button falls back to the demo flow.',
+    },
   })
 }

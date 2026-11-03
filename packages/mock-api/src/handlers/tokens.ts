@@ -2,8 +2,16 @@ import type { ServerResponse } from 'node:http'
 import type { MockStore } from '../store.js'
 import type { MockToken } from '../types.js'
 import { detectBrand, luhnValid, json, errorResponse } from '../utils.js'
+import { decryptCard } from '../crypto.js'
 
 export function handleCreateToken(store: MockStore, res: ServerResponse, body: Record<string, unknown>): void {
+  if (body.encrypted_card && !body.card) {
+    const card = decryptCard(body.encrypted_card as { ek?: string; iv?: string; ciphertext?: string })
+    if (!card) {
+      return errorResponse(res, 400, 'validation_error', 'decryption_failed', '无法解密卡数据。')
+    }
+    body = { ...body, card }
+  }
   const paymentMethodType = body.payment_method_type as string | undefined
   if (paymentMethodType) {
     const token: MockToken = {
