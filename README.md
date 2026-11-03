@@ -10,7 +10,7 @@
 
 ### 环境要求
 
-- Node.js >= 18
+- Node.js >= 22.22（jsdom 30 / undici 8）
 - pnpm >= 9
 
 ### 启动示例应用
@@ -20,7 +20,7 @@ pnpm install
 pnpm dev        # 构建 fields 包 + 启动示例站点（含 mock 后端）
 ```
 
-打开 http://localhost:3000，包含 16 个可交互示例页（合并卡、拆分卡、Payment Element、Express Checkout、Address、银行转账、购物车、订单、Afterpay/Clearpay、钱包按钮等），内置 mock 支付后端与 3DS 模拟挑战页。
+打开 http://localhost:3000，包含 19 个示例视图（合并卡、拆分卡、Payment Element、Express Checkout、Address、银行转账、购物车、订单、Afterpay/Clearpay、钱包按钮、Appearance 等），内置 mock 支付后端与 3DS 模拟挑战页。
 
 测试卡号：`4242 4242 4242 4242`（成功）· `4000 0000 0000 0002`（拒绝）· `4000 0000 0000 3220`（3DS）。更多见 [后端接口文档 §8](docs/backend-api.md)。
 
@@ -58,8 +58,8 @@ packages/
   fields/    @nexus-elements/fields  iframe 内字段层（Vue 实现，独立构建、独立部署）
   vue/       @nexus-elements/vue     Vue 3 适配层：Provider + 具名组件 + composables
 examples/    示例站点 + mock 支付后端（Vite 插件实现 /v1/* API 与 3DS 挑战页）
-docs/        需求 PRD、后端 API 契约、实现状态、API 参考、集成指南
-e2e-*.py     Playwright E2E 脚本（仓库根目录）
+docs/        需求 PRD、后端 API 契约、实现状态、API 参考、集成指南、安全部署
+tests/e2e/   Playwright Test（`*.spec.ts`，`pnpm e2e` 会拉起示例站点）
 ```
 
 ## 架构一览
@@ -77,7 +77,7 @@ e2e-*.py     Playwright E2E 脚本（仓库根目录）
 ```
 
 - 卡号等敏感数据只存在于 iframe 内，tokenize 后以 `tok_test_*` / `pm_test_*` 返回
-- 拆分字段（cardNumber/cardExpiry/cardCvc）在同一 `elements` 实例下自动成组，tokenize 时聚合
+- 拆分字段（cardNumber/cardExpiry/cardCvc）在字段源站用分组密钥加密后经 BroadcastChannel 聚合，原始卡数据不进入商户页面
 - 主题经 CSS 变量（`--nexus-*`）+ rules 选择器注入 iframe，支持运行时热切换
 
 ## 常用命令
@@ -85,14 +85,14 @@ e2e-*.py     Playwright E2E 脚本（仓库根目录）
 ```bash
 pnpm dev                # 示例站点开发（fields 改动后需重跑，或单独构建 fields）
 pnpm build              # 全部包构建
-pnpm test               # 全部单元测试（vitest，94 个）
+pnpm test               # 单元测试（vitest，226：core 90 + fields 131 + vue 2 + mock-api 3）
+pnpm test:coverage      # core / fields 覆盖率（行覆盖阈值 85%，当前 core 96.7%、fields 87.0%）
 pnpm typecheck          # 全部包 TypeScript 检查
-pnpm storybook          # Storybook 组件文档（9 个分类，60+ 变体）
+pnpm e2e                # Playwright 17 个用例（自动启动示例站点）
+pnpm storybook          # Storybook（9 个分类，58 个 story）
 pnpm build-storybook    # 构建 Storybook 静态站点
 pnpm verify:bundle      # 构建 + 包体积校验 + SRI 哈希生成
 pnpm --filter @nexus-elements/fields build   # 单独构建 fields（examples 从 dist 加载）
-
-python e2e-card-combined.py   # E2E（需先启动 pnpm dev，Playwright Python）
 ```
 
 注意：examples 通过 Vite 别名直接引用 core/vue 源码（HMR 生效），但 fields 从 `dist` 加载 —— 修改 `packages/fields` 后必须重新构建才能在示例中生效。
@@ -107,4 +107,5 @@ python e2e-card-combined.py   # E2E（需先启动 pnpm dev，Playwright Python�
 | [docs/requirements.md](docs/requirements.md) | 需求 PRD（19 组件全集） |
 | [docs/implementation-status.md](docs/implementation-status.md) | 实现进度与已知缺口 |
 | [docs/roadmap.md](docs/roadmap.md) | 项目路线图与功能演进 |
-| Storybook（`pnpm storybook`） | 组件交互文档（9 个分类，60+ 变体） |
+| [docs/security.md](docs/security.md) | 通道认证、CSP、独立字段域、应用层加密 |
+| Storybook（`pnpm storybook`） | 组件交互文档（9 个分类，58 个 story） |
