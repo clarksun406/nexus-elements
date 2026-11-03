@@ -1,16 +1,27 @@
 # 测试金字塔
 
-数量从下往上减少：单元最多，集成次之，契约对 mock 和真实服务各跑一遍，E2E 只覆盖关键支付路径。
+数量从下往上减少：单元最多，然后是同一套契约在两个实现上各跑一遍，再是少量 Postgres 集成，E2E 只留关键支付路径。
 
-| 层 | 跑什么 | 命令 |
+当前计数（vitest `it` / Playwright `test`）：
+
+| 层 | 用例数 | 内容 |
 |----|--------|------|
-| 单元 | contracts 校验；server 的状态机、沙箱网关、加解密、鉴权、幂等、内存仓储 | `pnpm --filter @nexus-elements/contracts test` · `pnpm --filter @nexus-elements/server test` |
-| 集成 | 真实 Postgres 上的 HTTP：支付成功后换进程仍能读到、过期 token、幂等、加密密钥重启、库里没有 PAN | 设置 `DATABASE_URL` 后同一条 server test。未设置则跳过 |
-| 契约 | `packages/contracts/suite/run.ts`，对 mock-api 和 `apps/server` 各执行一次（tokenize、确认、拒付、3DS、Setup、Checkout、加密卡、订单） | 包含在上面两个包的 `test` 里 |
-| E2E | 现有示例站 + mock（全部 spec） | `pnpm e2e` |
-| E2E | 同一批关键流程打真实后端：合并卡、拆分卡、3DS、SetupIntent、嵌入式/跳转 Checkout | `pnpm e2e:server` |
+| 单元 | **132** | contracts 校验 4。server 128：状态机非法迁移、沙箱网关、脱敏、webhook 签名、解密失败、鉴权与配置解析、幂等冲突、每个 `/v1` 家族的校验与错误信封、token 过期/复用 |
+| 契约 | **12** 个场景 × 2 个实现 = 24 次执行 | `packages/contracts/suite/run.ts`，mock-api 与 `apps/server` 各跑一遍 |
+| 集成 | **9** | 真实 Postgres：重启后仍能读到支付与加密密钥、token 过期、迁移重放；以及 payment_intents、setup_intents、checkout、3DS、orders、payment_methods、CORS/限流 |
+| E2E（server） | **6** | 合并卡、拆分卡、3DS、SetupIntent、嵌入式结账、跳转结账 |
+| E2E（mock） | **17** | 原有示例站点全量，仍打 mock-api |
 
-覆盖率：`pnpm --filter @nexus-elements/server test:coverage` 要求 `apps/server/src` 行 / 语句 / 函数 ≥ 90%，分支 ≥ 85%（不含进程入口 `src/index.ts` 和纯类型文件）。这条命令需要 `DATABASE_URL`，否则 Postgres 仓储不会被计入覆盖率、阈值会失败。CI 用 GitHub Actions 的 Postgres service 提供该变量。
+132 个单元 > 24 次契约执行 > 9 个集成 > 6 个服务端 E2E。
+
+| 层 | 命令 |
+|----|------|
+| 单元 + 契约 + 集成 | `pnpm --filter @nexus-elements/contracts test` 与 `pnpm --filter @nexus-elements/server test`。没有 `DATABASE_URL` 时 9 个集成用例跳过 |
+| 覆盖率 | `pnpm --filter @nexus-elements/server test:coverage`。`apps/server/src` 行 / 语句 / 函数 ≥ 90%，分支 ≥ 85%（不含 `src/index.ts` 和纯类型文件）。必须有 `DATABASE_URL`，否则 Postgres 仓储不会计入、阈值失败 |
+| E2E mock | `pnpm e2e` |
+| E2E server | `pnpm e2e:server`（内存后端，不依赖数据库） |
+
+最近一次本地覆盖率：行 99.0%，函数 99.3%，分支 89.1%。CI 用 GitHub Actions 的 Postgres service 注入 `DATABASE_URL`。
 
 本地 Postgres：
 
@@ -20,9 +31,10 @@ export DATABASE_URL=postgres://nexus:nexus@127.0.0.1:5432/nexus
 pnpm --filter @nexus-elements/server test:coverage
 ```
 
-内存后端不需要数据库，适合示例和 `pnpm e2e:server`：
+内存后端：
 
 ```bash
 pnpm --filter @nexus-elements/server build
+STORE=memory PORT=3001 node apps/server/dist/index.js
 pnpm e2e:server
 ```
