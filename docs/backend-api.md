@@ -697,3 +697,57 @@ Header: X-Nexus-Signature: t=1753603200,v1=5257a869e7ecebeda32affa62cdca3fa51cad
    │                            │                         │
    │  [展示支付结果]                                       │
 ```
+
+---
+
+## 11. 本仓库的实现（apps/server）
+
+`apps/server` 是按本文档与 **SDK 实际请求** 实现的商户后端。框架是 Fastify：官方 CORS / 限流插件、内置 pino、schema 友好，比自写 `node:http` 更接近生产进程。mock-api 仍留在 `packages/mock-api`，避免把 Vite 插件挪到 `apps/` 带来的示例站点和 Storybook 改动。
+
+本地：
+
+```bash
+pnpm --filter @nexus-elements/contracts build
+pnpm --filter @nexus-elements/server build
+STORE=memory PORT=3001 node apps/server/dist/index.js
+# 或：docker compose up --build    # server + postgres
+curl -s localhost:3001/health
+```
+
+环境变量见 `apps/server/.env.example`。示例站：
+
+```bash
+NEXUS_API_TARGET=http://127.0.0.1:3001 pnpm --filter examples dev
+```
+
+健康检查：`GET /health` → `{ "status": "ok", "store": "memory" | "postgres" }`。
+
+### 11.1 与本文档不一致、但与 SDK / mock 一致的地方
+
+SDK 代码和 mock-api 是行为来源。下面这些差异是有意对齐代码，而不是文档草稿：
+
+| 主题 | 文档 | 实际（SDK + mock，server 跟随） |
+|------|------|--------------------------------|
+| `GET /v1/encryption_key` | `algorithm: RSA-OAEP-256`，只给 PEM | SDK 只在 `algorithm === "RSA-OAEP"` 且有 `public_key_jwk` 时加密。Server 返回该形状，并额外带 `public_key_pem` |
+| 加密卡体 | `encrypted_key` + 分开的 `tag` | SDK 发送 `encrypted_card.{key_id,ek,iv,ciphertext}`，GCM tag 附在 ciphertext 末尾 |
+| 确认时的 `processing` | 状态机经过 `processing` | confirm 同步返回 `succeeded` / `requires_action` / 402，不把 `processing` 持久化 |
+| 取消 | 仅 `requires_payment_method` / `requires_action` | 除 `succeeded` 外都可取消 |
+| 更新时的未知字段 | 建议 400 | 忽略非白名单字段 |
+| `currency` | 必填 | 缺省 `cny`。Server 会把传入值转成小写 |
+| `POST /v1/tokens` 的 `client_secret` | 必填 | 不要求。托管结账页和部分银行字段不传 |
+| 托管结账与 3DS 卡 `4000…3220` | 未说明 | mock 直接成功。Server 同样不在 Checkout Session 上发起 3DS |
+| 鉴权 | 所有前端请求带 `X-Nexus-Key` | mock 不校验。Server 对 `/v1/*` 要求 `X-Nexus-Key` 或 `Authorization: Bearer sk_`。带了 `X-Nexus-Account` 则必须等于配置的账户 |
+| 创建 Intent | 商户前端或后端 | 默认允许 `pk_` 创建（示例站如此）。`ALLOW_PUBLISHABLE_CREATES=false` 后只接受 `sk_` |
+| Setup confirm 响应 | 含 `payment_method` 对象 | mock 只有 `setup_intent`。Server 在卡 token 上额外返回 `payment_method`（SDK 不读这个字段） |
+
+Server 额外提供 `Idempotency-Key`（mock 没有）：相同 key + 相同 body 回放第一次的响应；不同 body 返回 409。没有 key 时，用过的 token 仍是 `token_already_used`。
+
+### 11.2 没有实现的接口
+
+- 订阅 / nexus-recur：`mode: subscription` 会原样存下来，确认时仍是一笔一次性成功支付，没有账单周期。
+- 真实收单通道：只有 `SandboxChannel`。`PaymentChannel.authorize` 只接收分类结果，不接收 PAN，方便以后加 nexus-pay。
+- `GET /v1/payment_intents/:id`：SDK 不拉取 Intent。
+- Apple Pay：`POST /v1/apple_pay/sessions` 返回 501，与 mock 相同，钱包按钮走演示回退。
+- Webhook 是出站的：支付状态变化会签名（`X-Nexus-Signature`，`HMAC-SHA256(secret, "{t}.{body}")`）并在配置了 `NEXUS_WEBHOOK_URL` 时投递。失败只记日志，不回滚支付。没有给 SDK 用的 webhook 入站路由。
+
+PCI：不持久化 PAN / CVC。见 [security.md](security.md)。密钥生产环境应走 KMS/HSM（`NEXUS_RSA_PRIVATE_KEY`），不要依赖 Postgres 里的沙箱私钥。

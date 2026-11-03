@@ -54,12 +54,16 @@ async function pay(clientSecret: string, cardElement: NexusElement) {
 
 ```
 packages/
-  core/      @nexus-elements/core    框架无关 SDK：Nexus 入口、Elements 工厂、iframe 桥、主题引擎
-  fields/    @nexus-elements/fields  iframe 内字段层（Vue 实现，独立构建、独立部署）
-  vue/       @nexus-elements/vue     Vue 3 适配层：Provider + 具名组件 + composables
-examples/    示例站点 + mock 支付后端（Vite 插件实现 /v1/* API 与 3DS 挑战页）
-docs/        需求 PRD、后端 API 契约、实现状态、API 参考、集成指南、安全部署
-tests/e2e/   Playwright Test（`*.spec.ts`，`pnpm e2e` 会拉起示例站点）
+  core/        @nexus-elements/core       框架无关 SDK：Nexus 入口、Elements 工厂、iframe 桥、主题引擎
+  fields/      @nexus-elements/fields     iframe 内字段层（Vue 实现，独立构建、独立部署）
+  vue/         @nexus-elements/vue        Vue 3 适配层：Provider + 具名组件 + composables
+  mock-api/    @nexus-elements/mock-api   内存 mock，供示例站点和契约测试使用
+  contracts/   @nexus-elements/contracts  SDK ↔ 后端的共享类型、zod schema 与校验
+apps/
+  server/      @nexus-elements/server     可部署的商户后端（Fastify + Postgres）
+examples/      示例站点。默认挂 mock-api；设 `NEXUS_API_TARGET` 则把 `/v1` 代理到 apps/server
+docs/          需求 PRD、后端 API 契约、实现状态、API 参考、集成指南、测试金字塔、安全部署
+tests/e2e/     Playwright Test（`*.spec.ts`，`pnpm e2e` 打 mock，`pnpm e2e:server` 打真实后端）
 ```
 
 ## 架构一览
@@ -85,15 +89,28 @@ tests/e2e/   Playwright Test（`*.spec.ts`，`pnpm e2e` 会拉起示例站点）
 ```bash
 pnpm dev                # 示例站点开发（fields 改动后需重跑，或单独构建 fields）
 pnpm build              # 全部包构建
-pnpm test               # 单元测试（vitest，226：core 90 + fields 131 + vue 2 + mock-api 3）
-pnpm test:coverage      # core / fields 覆盖率（行覆盖阈值 85%，当前 core 96.7%、fields 87.0%）
+pnpm test               # 各包单元 / 契约测试（含 mock-api 与 apps/server；有 DATABASE_URL 时含 Postgres）
+pnpm test:coverage      # core / fields / server 覆盖率（server 行覆盖阈值 90%）
 pnpm typecheck          # 全部包 TypeScript 检查
-pnpm e2e                # Playwright 17 个用例（自动启动示例站点）
+pnpm e2e                # Playwright：示例站点 + mock-api
+pnpm e2e:server         # Playwright：卡支付、3DS、SetupIntent、Checkout 打 apps/server
 pnpm storybook          # Storybook（9 个分类，58 个 story）
 pnpm build-storybook    # 构建 Storybook 静态站点
 pnpm verify:bundle      # 构建 + 包体积校验 + SRI 哈希生成
 pnpm --filter @nexus-elements/fields build   # 单独构建 fields（examples 从 dist 加载）
+pnpm --filter @nexus-elements/server dev     # 需先 build。见 docs/testing.md 与 integration-guide
 ```
+
+真实后端：
+
+```bash
+cp apps/server/.env.example apps/server/.env   # 或直接用下面的内存模式
+STORE=memory pnpm --filter @nexus-elements/server build
+STORE=memory PORT=3001 node apps/server/dist/index.js
+# 另一个终端：NEXUS_API_TARGET=http://127.0.0.1:3001 pnpm --filter examples dev
+```
+
+Postgres 与 Docker 见 [集成指南 §1.2](docs/integration-guide.md) 和 [测试金字塔](docs/testing.md)。示例公钥是 `pk_test_nexus_example_key`（与 `apps/server/.env.example` 一致）。
 
 注意：examples 通过 Vite 别名直接引用 core/vue 源码（HMR 生效），但 fields 从 `dist` 加载 —— 修改 `packages/fields` 后必须重新构建才能在示例中生效。
 

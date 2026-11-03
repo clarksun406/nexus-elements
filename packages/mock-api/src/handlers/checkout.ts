@@ -1,15 +1,17 @@
 import type { ServerResponse } from 'node:http'
 import type { MockStore } from '../store.js'
 import type { MockPaymentIntent, MockCheckoutSession } from '../types.js'
+import { validateAmount } from '@nexus-elements/contracts'
 import { DECLINE_CARDS } from '../constants.js'
 import { json, errorResponse } from '../utils.js'
 import { validateAndConsumeToken } from './payment-intents.js'
 
 export function handleCreateCheckoutSession(store: MockStore, res: ServerResponse, body: Record<string, unknown>): void {
-  const amount = body.amount as number
-  if (!amount || !Number.isInteger(amount) || amount <= 0) {
-    return errorResponse(res, 400, 'validation_error', 'invalid_amount', '金额必须为正整数（最小单位）。')
+  const amountResult = validateAmount(body.amount)
+  if (!amountResult.ok) {
+    return errorResponse(res, amountResult.error.status, amountResult.error.type, amountResult.error.code, amountResult.error.message)
   }
+  const amount = amountResult.amount
 
   const id = `cs_test_${++store.checkoutCounter}`
   const clientSecret = `${id}_secret_${Math.random().toString(36).slice(2, 10)}`

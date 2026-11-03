@@ -387,3 +387,5 @@
 **Phase 6 Appearance API 增强已完成。** 变量 14→21（+colorWarning / colorTextPlaceholder / colorIcon / colorIconCheckmark / spacingTab / spacingGridRow / spacingGridColumn），规则选择器 10→18（+.Input:hover / .Input--disabled / .Tab:hover / .AccordionItem / .Checkbox 系列），所有组件 placeholder 色与品牌图标色 CSS 变量化。**示例覆盖**：`/appearance` 页面全面演示主题/变量/规则/字体/语言/元素样式/API 方法/事件订阅；`/card-combined` 页面增加 hidePostalCode/disabled 开关与 focus/blur/clear 方法按钮。
 
 **部署项：** SEC-005 通过 `fieldsUrl` 指向独立字段源站（不用 srcdoc，原因见 [security.md](security.md)）。SEC-006 / SEC-007 已在 mock API 与示例字段服务器落地（API `X-Frame-Options: DENY`，字段页 CSP `frame-ancestors`）。TOK-002 已实现。
+
+**商户后端：** `packages/contracts` 提供共享校验；`apps/server` 实现 SDK 实际调用的 `/v1` 接口（Fastify，Postgres 或内存，沙箱网关，TOK-002 解密，不落原始 PAN）。mock-api 改为消费同一套卡校验与测试卡表。契约测试对两者各跑一遍。详见 [testing.md](testing.md) 与 [backend-api.md](backend-api.md) 附录。订阅扣款、真实通道（nexus-pay / nexus-recur）和 HSM 仍未接。

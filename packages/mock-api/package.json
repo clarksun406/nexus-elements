@@ -21,6 +21,9 @@
     "dist"
   ],
   "sideEffects": false,
+  "dependencies": {
+    "@nexus-elements/contracts": "workspace:*"
+  },
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build && tsc --emitDeclarationOnly --outDir dist",

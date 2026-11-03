@@ -57,7 +57,7 @@ async function onConfirm(event: unknown) {
 
     const tokenRes = await fetch('/v1/tokens', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Nexus-Key': PUBLISHABLE_KEY },
       body: JSON.stringify({ payment_method_type: walletType }),
     })
     const tokenData = await tokenRes.json()
