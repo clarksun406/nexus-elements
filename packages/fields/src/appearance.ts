@@ -39,10 +39,30 @@ function buildRuleCss(rules: Record<string, Record<string, string>>): string {
   return css
 }
 
+const RADIUS_TARGETS = '.nexus-card-element, .nexus-field, .nexus-payment-element, .nexus-express-checkout'
+
+function paintBorderRadius(radius: string | undefined): void {
+  if (!radius) return
+  const apply = () => {
+    document.querySelectorAll<HTMLElement>(RADIUS_TARGETS).forEach((el) => {
+      el.style.borderRadius = radius
+    })
+  }
+  apply()
+  requestAnimationFrame(apply)
+}
+
 export function applyAppearance(appearance: ResolvedAppearancePayload): void {
   const root = document.documentElement
   for (const [cssVar, value] of Object.entries(appearance.variables)) {
     root.style.setProperty(cssVar, value)
+  }
+  paintBorderRadius(appearance.variables['--nexus-border-radius'])
+  if (appearance.variables['--nexus-outline']) {
+    root.style.setProperty('--nexus-outline', appearance.variables['--nexus-outline'])
+  }
+  if (appearance.variables['--nexus-z-index']) {
+    root.style.setProperty('--nexus-z-index', appearance.variables['--nexus-z-index'])
   }
 
   const css = buildRuleCss(appearance.rules)

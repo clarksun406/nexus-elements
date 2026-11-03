@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test:coverage
+      - run: pnpm --filter @nexus-elements/mock-api test
+      - run: pnpm --filter @nexus-elements/vue test
+      - run: pnpm verify:bundle
+      - run: node ./node_modules/@playwright/test/cli.js install --with-deps chromium
+      - run: pnpm e2e

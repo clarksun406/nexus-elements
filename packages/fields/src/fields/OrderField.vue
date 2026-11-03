@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import { bridge } from '../bridge'
+import { apiHeaders, apiUrl } from '../api/client'
+import { t } from '../i18n'
 
 interface CartItem {
   id: string
@@ -112,6 +114,39 @@ function formatDate(timestamp: string): string {
 }
 
 const isEmpty = computed(() => !orderId.value && items.value.length === 0)
+const syncing = ref(false)
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
+async function pullOrder(): Promise<void> {
+  if (!orderId.value) return
+  syncing.value = true
+  try {
+    const response = await fetch(apiUrl(`/v1/orders/${encodeURIComponent(orderId.value)}`), { headers: apiHeaders() })
+    if (!response.ok) return
+    const data = await response.json() as { order?: { status?: string; items?: CartItem[]; timeline?: TimelineEvent[] } }
+    const order = data.order
+    if (!order) return
+    if (order.status) status.value = order.status
+    if (Array.isArray(order.items)) items.value = order.items
+    if (Array.isArray(order.timeline)) timeline.value = order.timeline
+    bridge.send('nexus:change', { complete: true, empty: false, valid: true, elementType: 'order', value: { status: status.value, orderId: orderId.value } })
+  } catch {
+    // Polling is best-effort. The last rendered order stays on screen.
+  } finally {
+    syncing.value = false
+  }
+}
+
+function startPolling(): void {
+  if (pollTimer) clearInterval(pollTimer)
+  const interval = Number(options.value.pollInterval ?? 0)
+  if (!Number.isFinite(interval) || interval < 1000) return
+  pollTimer = setInterval(() => { void pullOrder() }, interval)
+}
+
+onBeforeUnmount(() => {
+  if (pollTimer) clearInterval(pollTimer)
+})
 
 bridge.on('nexus:init', (message) => {
   const payload = message.payload as { options: Record<string, unknown> }
@@ -140,6 +175,8 @@ bridge.on('nexus:init', (message) => {
   }
 
   bridge.send('nexus:ready', { elementType: 'order' })
+  startPolling()
+  void pullOrder()
 })
 
 bridge.on('nexus:update', (message) => {
@@ -160,6 +197,10 @@ bridge.on('nexus:update', (message) => {
   }
 })
 
+bridge.on('nexus:fetch-updates', () => {
+  void pullOrder()
+})
+
 bridge.on('nexus:clear', () => {
   orderId.value = ''
   status.value = 'pending'
@@ -172,6 +213,7 @@ bridge.on('nexus:clear', () => {
 
 <template>
   <div class="nexus-order">
+    <p v-if="syncing" class="nexus-order-sync" role="status" aria-live="polite">{{ t('orderSyncing') }}</p>
     <div v-if="isEmpty" class="nexus-order-empty">
       <p class="nexus-order-empty-text">暂无订单信息</p>
       <p class="nexus-order-empty-sub">No order information available</p>

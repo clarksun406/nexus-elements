@@ -1,12 +1,12 @@
 import type { IframeBridge } from './iframe/bridge'
-import { createElementIframe, destroyIframe } from './iframe/manager'
+import { createElementIframe, destroyIframe, fieldsOriginFor } from './iframe/manager'
 import { resolveAppearance } from './theme'
 import type { Appearance, ChangeEvent, ElementEventType, ReadyEvent } from './types'
-import type { BridgeMessage, ChangePayload, GroupedCardData, ReadyPayload } from './types/bridge'
+import type { BridgeMessage, ChangePayload, ReadyPayload } from './types/bridge'
 
 type EventHandler = (event: unknown) => void
 
-const CARD_PART_TYPES = ['cardNumber', 'cardExpiry', 'cardCvc']
+const LOAD_TIMEOUT_MS = 15000
 
 export class NexusElement {
   readonly id: string
@@ -25,6 +25,10 @@ export class NexusElement {
   private groupProvider: (() => NexusElement[]) | null = null
   private lastPropagatedBrand: string | null = null
   private fonts?: Array<{ family: string; src: string; weight?: string; style?: string }>
+  private apiBase: string
+  private nexusAccount?: string
+  private loadTimer: ReturnType<typeof setTimeout> | null = null
+  private sawReady = false
 
   constructor(params: {
     id: string
@@ -36,6 +40,8 @@ export class NexusElement {
     locale: string
     fieldsUrl?: string
     fonts?: Array<{ family: string; src: string; weight?: string; style?: string }>
+    apiBase?: string
+    nexusAccount?: string
   }) {
     this.id = params.id
     this.type = params.type
@@ -46,8 +52,12 @@ export class NexusElement {
     this.locale = params.locale
     this.fieldsUrl = params.fieldsUrl
     this.fonts = params.fonts
+    this.apiBase = params.apiBase ?? ''
+    this.nexusAccount = params.nexusAccount
 
     this.bridge.on('nexus:ready', this.id, (msg: BridgeMessage) => {
+      this.sawReady = true
+      this.clearLoadTimer()
       const payload = msg.payload as ReadyPayload
       this.emit('ready', {
         elementType: payload.elementType as ChangeEvent['elementType'],
@@ -78,7 +88,13 @@ export class NexusElement {
     })
     this.bridge.on('nexus:escape', this.id, () => this.emit('escape', {}))
     this.bridge.on('nexus:click', this.id, (msg: BridgeMessage) => this.emit('click', msg.payload))
-    this.bridge.on('nexus:error', this.id, (msg: BridgeMessage) => this.emit('error', msg.payload))
+    this.bridge.on('nexus:error', this.id, (msg: BridgeMessage) => {
+      this.emit('error', msg.payload)
+      const payload = msg.payload as { type?: string; code?: string }
+      if (payload?.type === 'loaderror' || payload?.code === 'loaderror') {
+        this.emit('loaderror', msg.payload)
+      }
+    })
     this.bridge.on('nexus:confirm', this.id, (msg: BridgeMessage) => {
       const payload = msg.payload as { walletType: string }
       this.emit('confirm', {
@@ -108,16 +124,24 @@ export class NexusElement {
         appearance: resolveAppearance(this.appearance),
         locale: this.locale,
         fonts: this.fonts,
+        apiBase: this.apiBase,
+        nexusAccount: this.nexusAccount,
       },
     )
     container.appendChild(this.iframe)
-    this.bridge.attach(this.id, this.iframe)
+    this.iframe.addEventListener('error', () => {
+      this.emit('loaderror', { type: 'loaderror', message: 'The secure field failed to load.' })
+    })
+    const origin = fieldsOriginFor({ elementId: this.id, elementType: this.type, fieldsUrl: this.fieldsUrl })
+    this.bridge.attach(this.id, this.iframe, origin)
+    this.armLoadTimer()
     this.mounted = true
     return this
   }
 
   unmount(): void {
     if (!this.mounted) return
+    this.clearLoadTimer()
     void this.bridge.send('nexus:unmount', this.id, {})
     this.bridge.detach(this.id)
     destroyIframe(this.iframe)
@@ -160,6 +184,15 @@ export class NexusElement {
     void this.bridge.send('nexus:clear', this.id, {})
   }
 
+  collapse(): void {
+    void this.bridge.send('nexus:collapse', this.id, {})
+  }
+
+  fetchUpdates(): Promise<void> {
+    if (!this.mounted) return Promise.resolve()
+    return this.bridge.send('nexus:fetch-updates', this.id, {}).then(() => undefined)
+  }
+
   on(event: ElementEventType, handler: EventHandler): this {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set())
@@ -182,25 +215,7 @@ export class NexusElement {
   }
 
   async tokenize(clientSecret: string, billingDetails?: Record<string, unknown>): Promise<{ token?: string; paymentMethodId?: string; error?: { type: string; code?: string; message: string } }> {
-    const groupedCard = await this.collectGroupedCardData()
-    return this.bridge.sendAndWait('nexus:tokenize', this.id, { clientSecret, billingDetails, groupedCard }, 'nexus:token-result')
-  }
-
-  private async collectGroupedCardData(): Promise<GroupedCardData | undefined> {
-    if (!CARD_PART_TYPES.includes(this.type)) return undefined
-    const siblings = (this.groupProvider?.() ?? []).filter(
-      (sibling) => sibling.id !== this.id && CARD_PART_TYPES.includes(sibling.type),
-    )
-    if (siblings.length === 0) return undefined
-
-    const parts = await Promise.all(
-      siblings.map((sibling) =>
-        this.bridge
-          .sendAndWait<Record<string, never>, GroupedCardData>('nexus:collect-data', sibling.id, {}, 'nexus:collect-result', 3000)
-          .catch(() => ({} as GroupedCardData)),
-      ),
-    )
-    return Object.assign({}, ...parts) as GroupedCardData
+    return this.bridge.sendAndWait('nexus:tokenize', this.id, { clientSecret, billingDetails }, 'nexus:token-result')
   }
 
   isMounted(): boolean {
@@ -209,5 +224,26 @@ export class NexusElement {
 
   private emit(event: string, payload: unknown): void {
     this.listeners.get(event)?.forEach((handler) => handler(payload))
+  }
+
+  private armLoadTimer(): void {
+    this.clearLoadTimer()
+    this.sawReady = false
+    const timer = setTimeout(() => {
+      if (!this.sawReady && this.mounted) {
+        this.emit('loaderror', { type: 'loaderror', message: 'The secure field took too long to load.' })
+      }
+    }, LOAD_TIMEOUT_MS)
+    if (typeof timer === 'object' && timer && 'unref' in timer) {
+      ;(timer as { unref: () => void }).unref()
+    }
+    this.loadTimer = timer
+  }
+
+  private clearLoadTimer(): void {
+    if (this.loadTimer) {
+      clearTimeout(this.loadTimer)
+      this.loadTimer = null
+    }
   }
 }

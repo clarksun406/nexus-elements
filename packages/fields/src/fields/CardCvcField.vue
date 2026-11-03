@@ -6,7 +6,8 @@ import { formatCvc } from '../validation/format'
 import { t, validationMessages } from '../i18n'
 import { useElementStyle, type ElementStyle } from '../composables/useElementStyle'
 import type { CardBrand } from '../validation/brands'
-import type { GroupedCardData } from '../bridge/types'
+import { publishTokenResult } from '../api/token'
+import { collectCardParts, publishCardParts } from '../secure/group-channel'
 
 const options = ref<Record<string, unknown>>({})
 const value = ref('')
@@ -17,6 +18,10 @@ const validation = computed(() => validateCardCvc(value.value, brand.value, vali
 const elementStyle = computed(() => options.value.style as ElementStyle | undefined)
 
 useElementStyle(elementStyle)
+
+watch(value, () => {
+  void publishCardParts('cardCvc', { cvc: value.value })
+})
 
 watch(validation, () => {
   bridge.send('nexus:change', {
@@ -62,12 +67,8 @@ bridge.on('nexus:clear', () => {
   value.value = ''
 })
 
-bridge.on('nexus:collect-data', () => {
-  bridge.send('nexus:collect-result', { cvc: value.value })
-})
-
 bridge.on('nexus:tokenize', async (message) => {
-  const payload = message.payload as { clientSecret: string; billingDetails?: Record<string, unknown>; groupedCard?: GroupedCardData }
+  const payload = message.payload as { clientSecret: string; billingDetails?: Record<string, unknown> }
 
   if (!validation.value.isValid) {
     bridge.send('nexus:token-result', {
@@ -76,30 +77,17 @@ bridge.on('nexus:tokenize', async (message) => {
     return
   }
 
-  try {
-    const response = await fetch('/v1/tokens', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_secret: payload.clientSecret,
-        card: {
-          number: payload.groupedCard?.number,
-          exp_month: payload.groupedCard?.exp_month,
-          exp_year: payload.groupedCard?.exp_year,
-          cvc: value.value,
-        },
-        billing_details: payload.billingDetails,
-      }),
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      bridge.send('nexus:token-result', { error: data.error ?? { type: 'api_error', message: 'Tokenization failed.' } })
-    } else {
-      bridge.send('nexus:token-result', { token: data.token, paymentMethodId: data.payment_method_id })
-    }
-  } catch {
-    bridge.send('nexus:token-result', { error: { type: 'network_error', message: 'A network error occurred.' } })
-  }
+  const parts = await collectCardParts('cardCvc', { cvc: value.value })
+  await publishTokenResult({
+    client_secret: payload.clientSecret,
+    card: {
+      number: parts.number,
+      exp_month: parts.exp_month,
+      exp_year: parts.exp_year,
+      cvc: parts.cvc,
+    },
+    billing_details: payload.billingDetails,
+  })
 })
 
 const disabled = computed(() => options.value.disabled === true)

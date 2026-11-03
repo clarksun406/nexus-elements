@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { bridge } from '../bridge'
+import { isApplePayAvailable, isGooglePayAvailable, startApplePay, startGooglePay } from '../wallets/native'
+import { t } from '../i18n'
 
 type WalletType = 'applePay' | 'googlePay' | 'paypal' | 'link'
 type ButtonTheme = 'black' | 'white' | 'white-outline'
@@ -26,15 +28,29 @@ const options = ref<Record<string, unknown>>({})
 const processingWallet = ref<WalletType | null>(null)
 const resultState = ref<{ wallet: WalletType; status: 'success' | 'fail' } | null>(null)
 
+const nativeSupport: Record<WalletType, () => boolean> = {
+  applePay: isApplePayAvailable,
+  googlePay: isGooglePayAvailable,
+  paypal: () => false,
+  link: () => false,
+}
+
 const availableWallets = computed<WalletType[]>(() => {
   const config = options.value.paymentMethods as Record<string, 'auto' | 'always' | 'never'> | undefined
   return ALL_WALLETS.filter((wallet) => {
     const setting = config?.[wallet] ?? 'auto'
     if (setting === 'never') return false
     if (setting === 'always') return true
-    // 'auto': real SDK availability detection is mocked — all wallets report available
-    return true
+    // auto: show a native wallet when the device supports it, and keep a mock
+    // button in insecure/demo contexts so the element is still usable.
+    if (nativeSupport[wallet]()) return true
+    return options.value.mockWallets !== false
   })
+})
+
+const layoutDirection = computed(() => {
+  const layout = options.value.layout as { type?: 'horizontal' | 'vertical'; maxColumns?: number } | undefined
+  return layout?.type === 'vertical' ? 'vertical' : 'horizontal'
 })
 
 const maxColumns = computed(() => {
@@ -74,10 +90,47 @@ function displayFor(wallet: WalletType): string {
   return labelFor(wallet)
 }
 
-function onClick(wallet: WalletType) {
+async function onClick(wallet: WalletType) {
   if (processingWallet.value) return
   processingWallet.value = wallet
-  bridge.send('nexus:confirm', { walletType: wallet })
+  const business = options.value.business as { amount?: number; currency?: string; name?: string; country?: string } | undefined
+  const request = {
+    amount: business?.amount ?? 0,
+    currency: business?.currency ?? 'usd',
+    label: business?.name ?? 'Total',
+    countryCode: business?.country,
+  }
+  try {
+    if (wallet === 'applePay' && isApplePayAvailable()) {
+      const token = await startApplePay(request)
+      if (!token) {
+        processingWallet.value = null
+        bridge.send('nexus:cancel', { walletType: wallet })
+        return
+      }
+      bridge.send('nexus:confirm', { walletType: wallet, token })
+      return
+    }
+    if (wallet === 'googlePay' && isGooglePayAvailable()) {
+      const token = await startGooglePay(request)
+      if (!token) {
+        processingWallet.value = null
+        bridge.send('nexus:cancel', { walletType: wallet })
+        return
+      }
+      bridge.send('nexus:confirm', { walletType: wallet, token })
+      return
+    }
+  } catch {
+    // Native wallets throw outside Safari/Chrome merchant setups. Fall through to the mock.
+  }
+  bridge.send('nexus:confirm', { walletType: wallet, mock: !nativeSupport[wallet]() })
+}
+
+function onCancel() {
+  processingWallet.value = null
+  resultState.value = null
+  bridge.send('nexus:cancel', {})
 }
 
 bridge.on('nexus:init', (message) => {
@@ -113,7 +166,8 @@ bridge.on('nexus:complete', (message) => {
 <template>
   <div
     class="nexus-express-checkout"
-    :style="{ gridTemplateColumns: `repeat(${maxColumns}, 1fr)` }"
+    :class="`nexus-express-checkout--${layoutDirection}`"
+    :style="layoutDirection === 'vertical' ? { gridTemplateColumns: '1fr' } : { gridTemplateColumns: `repeat(${maxColumns}, 1fr)` }"
   >
     <button
       v-for="wallet in availableWallets"
@@ -133,6 +187,15 @@ bridge.on('nexus:complete', (message) => {
       @click="onClick(wallet)"
     >
       {{ displayFor(wallet) }}
+    </button>
+    <button
+      v-if="processingWallet"
+      type="button"
+      class="nexus-wallet-cancel"
+      :aria-label="t('ariaCancelWallet')"
+      @click="onCancel"
+    >
+      {{ t('walletCancel') }}
     </button>
   </div>
 </template>
@@ -176,6 +239,17 @@ bridge.on('nexus:complete', (message) => {
   color: #000;
 }
 
+.nexus-express-checkout--vertical {
+  grid-template-columns: 1fr;
+}
+.nexus-wallet-cancel {
+  grid-column: 1 / -1;
+  border: 1px solid var(--nexus-color-border, #e0e0e0);
+  background: transparent;
+  border-radius: var(--nexus-border-radius, 6px);
+  padding: 8px;
+  cursor: pointer;
+}
 .nexus-wallet-btn--white-outline {
   background: #fff;
   color: #000;

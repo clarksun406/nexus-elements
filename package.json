@@ -4,11 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @nexus-elements/fields build && pnpm --filter examples dev",
+    "dev": "pnpm --filter @nexus-elements/mock-api build && pnpm --filter @nexus-elements/fields build && pnpm --filter examples dev",
     "build": "pnpm -r build",
     "build:examples": "pnpm --filter examples build",
-    "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r --if-present test",
+    "test:coverage": "pnpm -r --filter @nexus-elements/core --filter @nexus-elements/fields test:coverage",
+    "e2e": "node ./node_modules/@playwright/test/cli.js test",
+    "typecheck": "pnpm --filter @nexus-elements/core exec tsc --emitDeclarationOnly --outDir dist && pnpm -r typecheck",
     "lint": "eslint . --ext .ts,.vue",
     "verify:bundle": "pnpm build && node scripts/verify-bundle.mjs",
     "storybook": "storybook dev -p 6006",
@@ -16,6 +18,7 @@
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.2.1",
+    "@playwright/test": "^1.64.1",
     "@storybook/addon-a11y": "^10.5.5",
     "@storybook/addon-docs": "^10.5.5",
     "@storybook/addon-onboarding": "^10.5.5",
@@ -32,7 +35,7 @@
     "vitest": "^3.0.0"
   },
   "engines": {
-    "node": ">=18.0.0",
+    "node": ">=22.22.0",
     "pnpm": ">=9.0.0"
   },
   "packageManager": "pnpm@9.15.0"

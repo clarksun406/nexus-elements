@@ -19,7 +19,7 @@
 
 **组件进度：19 / 19**（card、cardNumber、cardExpiry、cardCvc、payment、expressCheckout、address、idealBank、fpxBank、epsBank、p24Bank、iban、auBankAccount、paymentMethodMessaging、linkAuthentication、cart、order、afterpayClearpay、walletButton）
 
-**验证状态：** 176 个单元测试通过 · 19 个 Playwright E2E 脚本通过 · 5 包 TypeScript strict 零错误 · 全量构建通过 · 包体积自动校验（`scripts/verify-bundle.mjs`）
+**验证状态：** 226 个单元测试通过（core 90、fields 131、vue 2、mock-api 3）· 行覆盖率 core 96.7% / fields 87.0% · 17 个 Playwright Test 通过（`pnpm e2e`，含伪造 postMessage）· TypeScript strict 通过 · 全量构建通过 · 包体积：fields 入口 JS 33.48 KB gzip、core ESM 7.11 KB、SDK 计量合计 47.14 KB gzip（`scripts/verify-bundle.mjs`）
 
 ---
 
@@ -62,14 +62,14 @@
 | SEC-001 | ✅ | 所有敏感字段渲染于独立 iframe（`sandbox="allow-scripts allow-same-origin allow-forms"`） |
 | SEC-002 | ✅ | postMessage 双向 HMAC-SHA256 签名（Web Crypto，CryptoKey 缓存，`sig_<64hex>`），双端校验 |
 | SEC-003 | 🔶 | sandbox 已限制权限；`allow-same-origin` 因同源 mock 保留（生产需独立域，见 SEC-005） |
-| SEC-004 | ✅ | 商户页仅获得 token / 元数据。**注意**：拆分字段分组时原始分段经父页面桥内存中转（与 Stripe 架构一致，不暴露给商户代码） |
+| SEC-004 | ✅ | 商户页只收到 token / 品牌等元数据。拆分卡在字段源站经 AES-GCM BroadcastChannel 聚合，父页面桥会再删掉 number/cvc/iban/account_number |
 | SEC-005 | 🔶 | `fieldsUrl` 可配置指向独立部署；生产独立域 / 开发 srcdoc 未实现 |
 | SEC-006 | ⬜ | CSP 配置（属服务端部署项） |
 | SEC-007 | ⬜ | fields 域 X-Frame-Options（属服务端部署项） |
 | SEC-008 | ✅ | 字段层无任何 localStorage / sessionStorage / cookie 写入 |
 | SEC-009 | ✅ | `scripts/verify-bundle.mjs` 自动生成 SHA-384 SRI 哈希；`loadScript({ integrity })` 设置 `script.integrity` + `crossOrigin` |
 | TOK-001 | ✅ | iframe 内 POST `/v1/tokens` 换取一次性 token（`tok_test_*` / `pm_test_*`） |
-| TOK-002 | ⏸️ 暂缓 | 仅 TLS；应用层加密暂缓——iframe 隔离 + TLS 已是行业标准（Stripe 同方案），客户端加密增加复杂度但安全收益极小 |
+| TOK-002 | ✅ | 字段 tokenize 使用服务端下发的 RSA-OAEP 公钥封装 AES-256-GCM 卡对象（`GET /v1/encryption_key`）。密钥接口不可用时退回仅 TLS。见 [security.md](security.md) |
 | TOK-003 | ✅ | mock 强制：token 单次有效、5 分钟过期、重复使用报 `token_already_used` |
 | TOK-004 | ✅ | change 事件仅暴露 complete / empty / valid / error / brand / paymentMethodType |
 
@@ -83,7 +83,7 @@
 | CE-004 | ✅ | MM / YY 自动格式化 + 过期校验（不早于当月、不超 20 年） |
 | CE-005 | ✅ | CVC 长度随品牌（Amex 4 位） |
 | CE-006 | ✅ | invalid / incomplete 区分 + 行内错误提示 |
-| CE-007 | 🔶 | Enter 跨段、Esc 事件已做；退格跨段回退 / 方向键导航未完整 |
+| CE-007 | ✅ | `useCardInputs.ts` 已处理 Enter 跨段、退格回到上一段，以及左右方向键在段首/段尾的导航；Esc 经桥抛出 |
 | CE-008 | ✅ | `showIcon`/`hideIcon` ✅；`hidePostalCode` 内嵌 postal code 字段 ✅ |
 | CE-009 | ✅ | 整卡粘贴自动拆分到号/期/码三段 |
 | CE-010 | ✅ | `disabled` 状态 |
@@ -98,7 +98,7 @@
 | CC-001 | ✅ | 独立 CVC 密码式显示 |
 | CC-002 | ✅ | 长度随品牌逻辑已有；**brand 跨 iframe 自动传播**（cardNumber → cvc 经 `nexus:brand` 自动同步） |
 | CC-003 | ✅ | placeholder 自定义 |
-| —（分组） | ✅ | **本轮新增**：同一 elements 实例下 cardNumber/cardExpiry/cardCvc 自动成组，tokenize 时经 `nexus:collect-data`/`nexus:collect-result` 聚合为完整卡对象（mock 已强制完整卡，E2E 实证） |
+| —（分组） | ✅ | 同一 elements 实例下 cardNumber/cardExpiry/cardCvc 自动成组。分段在字段源站加密交换，不经父页面 |
 
 ### 4.1 Payment Element
 
@@ -254,7 +254,7 @@
 
 | 能力 | 状态 | 实现说明 |
 |------|------|----------|
-| 4 套预设主题 | ✅ | stripe / flat / night / none（`packages/core/src/theme/index.ts`，26 个单测） |
+| 4 套预设主题 | ✅ | stripe / flat / night / none（`packages/core/src/theme/index.ts`，主题单测 7 个；flat 圆角 2px 会写到字段根节点） |
 | variables 覆写 | ✅ | 21 个变量映射为 `--nexus-*` CSS 变量注入 iframe（新增 colorWarning / colorTextPlaceholder / colorIcon / colorIconCheckmark / spacingTab / spacingGridRow / spacingGridColumn） |
 | rules 覆写 | ✅ | 18 类选择器映射注入 `<style>`（新增 .Input:hover / .Input--disabled / .Tab:hover / .AccordionItem / .Checkbox / .CheckboxInput / .CheckboxInput--checked / .CheckboxInput:focus） |
 | 运行时切换 | ✅ | `elements.update({appearance})` → `nexus:appearance` 热更新（E2E 验证 night 背景 / flat 圆角） |
@@ -269,8 +269,8 @@
 | 校验器注册表抽象（iban/bsb/postalCode） | ✅ | 统一注册表 `registerValidator(type, fn)` / `validate(type, value, context?)`，预置 cardNumber/cardExpiry/cardCvc/iban/bsb，支持商户自定义（11 单测，`packages/fields/src/validation/registry.ts`） |
 | i18n（23 locale） | ✅ | 78 个翻译键（en/zh/ja/ko/de/fr/es/it/pt/nl/pl/da/sv/no/fi/ru/ar/hi/th/vi/id/ms/tr），覆盖校验消息、标签、Cart/Order/APC/Link 文案（`packages/fields/src/i18n/index.ts`，27 单测） |
 | WCAG 2.1 AA | ✅ | aria-label / aria-invalid / aria-checked / role=alert / role=radio / tabindex / focus-visible / 键盘导航 全面审计修复（LinkAuthentication / Cart / WalletButton / ExpressCheckout / CardField / PaymentField / 银行选择器） |
-| 单测覆盖率度量与补齐 | ✅ | 176 个单元测试（core 63 + fields 113），覆盖 element 生命周期 / 桥通信 / i18n / 校验器注册表 / useCardInputs 组合式函数 |
-| SDK < 50KB gzip | ✅ | core 5.2 KB + fields JS 51 KB + CSS 4.4 KB gzip；SDK 总计 66.3 KB gzip（`scripts/verify-bundle.mjs` 自动校验） |
+| 单测覆盖率度量与补齐 | ✅ | 226 个单元测试。core 行覆盖 96.7%，fields 行覆盖 87.0%（阈值 85%）。含字段组件、IframeBridge/FieldBridge、confirm/3DS、mock token 单次与过期 |
+| SDK 体积 | ✅ | 限额内：core ESM 7.11 KB、core IIFE 6.43 KB、fields 入口 JS 33.48 KB、共享 CSS 0.11 KB gzip；脚本合计 47.14 KB。字段样式随各自 chunk 下发，入口不再打包全部语言和全部组件。PRD 的 < 50KB 单文件目标尚未达到（入口含 Vue 运行时，33.48 KB） |
 
 ---
 
@@ -350,8 +350,8 @@
 
 ### 测试与验证
 
-- 单元测试 176 个：core 63（bridge 签名格式、createNexus、confirmPayment 直接路径、loadScript CDN 加载器 11 个、**element 生命周期 24 个**）+ fields 113（校验/格式化 55 + **校验器注册表 11** + **i18n 27** + **useCardInputs 20**）+ theme 26（计入 core）
-- E2E 脚本 19 个（Playwright Python，`tests/e2e/` 目录）：
+- 单元测试 226 个：core 90、fields 131、vue 2、mock-api 3。主题单测 7 个（在 core 内）。
+- E2E 17 个（`@playwright/test`，`tests/e2e/*.spec.ts`，`pnpm e2e`）：
   - `e2e-card-combined.py` — 填卡（含 postal code）→ 支付成功 → night/flat 主题断言 → hidePostalCode/disabled 切换 → focus/blur/clear 方法 → 事件日志验证
   - `e2e-card-split.py` — 三 iframe 填卡 → 分组聚合 → 支付成功
   - `e2e-3ds.py` — 3DS 卡 → 挑战页 → 批准 → 回跳 → 支付成功
@@ -386,4 +386,4 @@
 
 **Phase 6 Appearance API 增强已完成。** 变量 14→21（+colorWarning / colorTextPlaceholder / colorIcon / colorIconCheckmark / spacingTab / spacingGridRow / spacingGridColumn），规则选择器 10→18（+.Input:hover / .Input--disabled / .Tab:hover / .AccordionItem / .Checkbox 系列），所有组件 placeholder 色与品牌图标色 CSS 变量化。**示例覆盖**：`/appearance` 页面全面演示主题/变量/规则/字体/语言/元素样式/API 方法/事件订阅；`/card-combined` 页面增加 hidePostalCode/disabled 开关与 focus/blur/clear 方法按钮。
 
-**部署项（非本仓库职责，文档记录）：** SEC-005 独立域、SEC-006 CSP、SEC-007 X-Frame-Options。~~TOK-002 应用层加密~~已暂缓（iframe 隔离 + TLS 已满足安全需求）。
+**部署项：** SEC-005 通过 `fieldsUrl` 指向独立字段源站（不用 srcdoc，原因见 [security.md](security.md)）。SEC-006 / SEC-007 已在 mock API 与示例字段服务器落地（API `X-Frame-Options: DENY`，字段页 CSP `frame-ancestors`）。TOK-002 已实现。

@@ -23,12 +23,14 @@ const nexus = createNexus('pk_test_xxx', { apiBase: '', locale: 'zh' })
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `apiBase` | `string` | 后端 API 前缀，默认 `''`（同源 `/v1/*`） |
-| `locale` | `SupportedLocale` | 语言（23 种，目前仅透传 ⬜） |
-| `nexusAccount` | `string` | 平台代收账户 ⬜ |
+| `locale` | `SupportedLocale` | 语言，会传到字段 iframe |
+| `nexusAccount` | `string` | 平台账户，确认与 tokenize 时作为 `X-Nexus-Account` |
+| `fieldsUrl` | `string` | 字段 iframe 地址。生产环境应为独立源站 |
+| `cdn` / `scriptUrl` | `boolean` / `string` | `loadNexus` 是否先插入 CDN script |
 
 ### loadNexus(publishableKey, options?)
 
-`createNexus` 的 Promise 版本（对标 `loadStripe`），当前直接 resolve 本地构造的实例。
+`createNexus` 的 Promise 版本。默认直接使用已打包的模块。传入 `{ cdn: true }` 或 `{ scriptUrl }` 时先加载脚本，再调用 `window.Nexus.createNexus`。
 
 ### loadScript(options?)
 
@@ -116,7 +118,7 @@ await nexus.confirmSetup({ elements, clientSecret, confirmParams: { return_url: 
 | `create(type, options?)` | 创建元素。type 见 §5；未知 type 会在 iframe 内回退渲染 CardField ⬜ |
 | `getElement(id)` | 按内部 id 取元素 |
 | `update(options)` | 合并更新 options；`appearance` 变更会热更新所有已挂载 iframe |
-| `fetchUpdates()` | 预留（当前空实现） |
+| `fetchUpdates()` | 通知已挂载的 cart / order / payment 元素刷新。Order 在配置了 `pollInterval` 时也会轮询 `GET /v1/orders/:id` |
 | `destroyAll()` | 销毁全部元素 |
 | `getClientSecret()` | 返回构造时的 `clientSecret` |
 
@@ -126,7 +128,9 @@ await nexus.confirmSetup({ elements, clientSecret, confirmParams: { return_url: 
 
 | 方法 | 说明 |
 |------|------|
-| `mount(target)` | `selector \| HTMLElement`，创建 sandboxed iframe 并挂载；重复挂载/已销毁抛错 |
+| `mount(target)` | `selector \| HTMLElement`，创建 sandboxed iframe 并挂载；重复挂载/已销毁抛错。sandbox 不含 `allow-top-navigation` |
+| `collapse()` | 通知 Payment Element 折叠手风琴 |
+| `fetchUpdates()` | 向该元素发送刷新 |
 | `unmount()` | 移除 iframe、解绑桥，可重新 mount |
 | `destroy()` | unmount + 清空监听，不可复用 |
 | `update(options)` | 运行时合并更新，返回 `Promise<void>`（等待 iframe ready） |

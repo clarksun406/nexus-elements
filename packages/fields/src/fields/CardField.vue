@@ -6,6 +6,8 @@ import { useElementStyle, type ElementStyle } from '../composables/useElementSty
 import { getBrandRule } from '../validation/brands'
 import { t } from '../i18n'
 import { getBrandIcon } from '../assets/brand-icons'
+import { publishTokenResult } from '../api/token'
+import { publishCardParts } from '../secure/group-channel'
 
 const options = ref<Record<string, unknown>>({})
 const focusedField = ref<'number' | 'expiry' | 'cvc' | 'postal' | null>(null)
@@ -56,6 +58,17 @@ const cardEmpty = computed(() => {
   if (!isEmpty.value) return false
   if (showPostalCode.value && postalCode.value.trim()) return false
   return true
+})
+
+watch([number, expiry, cvc, postalCode], () => {
+  const digits = number.value.replace(/\D/g, '')
+  void publishCardParts('card', {
+    number: digits,
+    exp_month: expiry.value.length >= 5 ? parseInt(expiry.value.slice(0, 2), 10) : undefined,
+    exp_year: expiry.value.length >= 5 ? 2000 + parseInt(expiry.value.slice(3, 5), 10) : undefined,
+    cvc: cvc.value,
+    postalCode: postalCode.value,
+  })
 })
 
 watch([cardComplete, cardEmpty, cardValid, brand, postalCode], () => {
@@ -157,37 +170,23 @@ bridge.on('nexus:tokenize', async (message) => {
     return
   }
 
-  try {
-    const billingDetails = payload.billingDetails ?? {}
-    const response = await fetch('/v1/tokens', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_secret: payload.clientSecret,
-        card: {
-          number: number.value.replace(/\D/g, ''),
-          exp_month: parseInt(expiry.value.slice(0, 2), 10),
-          exp_year: 2000 + parseInt(expiry.value.slice(3, 5), 10),
-          cvc: cvc.value,
-        },
-        billing_details: {
-          ...billingDetails,
-          address: {
-            ...(billingDetails.address as Record<string, unknown> | undefined),
-            postal_code: postalCode.value || undefined,
-          },
-        },
-      }),
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      bridge.send('nexus:token-result', { error: data.error ?? { type: 'api_error', message: 'Tokenization failed.' } })
-    } else {
-      bridge.send('nexus:token-result', { token: data.token, paymentMethodId: data.payment_method_id })
-    }
-  } catch {
-    bridge.send('nexus:token-result', { error: { type: 'network_error', message: 'A network error occurred.' } })
-  }
+  const billingDetails = payload.billingDetails ?? {}
+  await publishTokenResult({
+    client_secret: payload.clientSecret,
+    card: {
+      number: number.value.replace(/\D/g, ''),
+      exp_month: parseInt(expiry.value.slice(0, 2), 10),
+      exp_year: 2000 + parseInt(expiry.value.slice(3, 5), 10),
+      cvc: cvc.value,
+    },
+    billing_details: {
+      ...billingDetails,
+      address: {
+        ...(billingDetails.address as Record<string, unknown> | undefined),
+        postal_code: postalCode.value || undefined,
+      },
+    },
+  })
 })
 
 const showIcon = computed(() => options.value.showIcon !== false && options.value.hideIcon !== true)

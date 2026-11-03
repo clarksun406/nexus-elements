@@ -15,12 +15,15 @@ import {
   handleGetCheckoutSession,
   handleConfirmCheckoutSession,
 } from './handlers/checkout.js'
-import { handleComplete3ds, handleGetPaymentMethods, handleGetEncryptionKey } from './handlers/misc.js'
+import { handleComplete3ds, handleGetPaymentMethods, handleGetEncryptionKey, handleGetOrder, handleUpsertOrder, handleApplePaySession } from './handlers/misc.js'
+import { applySecurityHeaders, isCheckoutPath } from './security.js'
 
 export function createRequestHandler(store: MockStore) {
   return async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const rawUrl: string = (req.url ?? '/').split('?')[0]!
     const method = req.method ?? 'GET'
+    const frameable = isCheckoutPath(rawUrl) || rawUrl === '/3ds-mock'
+    applySecurityHeaders(res, frameable ? 'frameable' : 'api')
 
     try {
       // 3DS mock challenge page
@@ -41,7 +44,7 @@ export function createRequestHandler(store: MockStore) {
       }
 
       // Hosted embedded checkout page
-      if (rawUrl === '/__nexus-checkout' && method === 'GET') {
+      if (isCheckoutPath(rawUrl) && method === 'GET') {
         res.setHeader('Content-Type', 'text/html; charset=utf-8')
         res.end(checkoutPage())
         return
@@ -131,6 +134,21 @@ export function createRequestHandler(store: MockStore) {
         const sessionConfirmMatch = url.match(/^\/checkout\/sessions\/(cs_test_\d+)\/confirm$/)
         if (method === 'POST' && sessionConfirmMatch) {
           handleConfirmCheckoutSession(store, req, res, sessionConfirmMatch[1]!, body)
+          return
+        }
+
+        const orderMatch = url.match(/^\/orders\/([^/]+)$/)
+        if (orderMatch && method === 'GET') {
+          handleGetOrder(res, decodeURIComponent(orderMatch[1]!))
+          return
+        }
+        if (orderMatch && method === 'POST') {
+          handleUpsertOrder(res, decodeURIComponent(orderMatch[1]!), body)
+          return
+        }
+
+        if (method === 'POST' && url === '/apple_pay/sessions') {
+          handleApplePaySession(res)
           return
         }
 

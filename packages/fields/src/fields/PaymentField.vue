@@ -5,6 +5,7 @@ import { useCardInputs } from '../composables/useCardInputs'
 import { getBrandRule } from '../validation/brands'
 import { t } from '../i18n'
 import { getBrandIcon } from '../assets/brand-icons'
+import { publishTokenResult } from '../api/token'
 
 type Layout = 'tabs' | 'accordion' | 'radio'
 
@@ -84,6 +85,15 @@ const savedMethods = computed<SavedMethod[]>(() => {
 })
 
 const selectedSaved = ref('')
+const saveCard = ref(false)
+const linkEmail = ref('')
+const collapsed = ref(false)
+
+const allowSave = computed(() => options.value.allowSavePaymentMethod !== false)
+const showLink = computed(() => {
+  const wallets = options.value.wallets
+  return Array.isArray(wallets) && wallets.includes('link')
+})
 
 const billingControls = computed(() => {
   const fields = options.value.fields as { billingDetails?: Record<string, BillingControl> } | undefined
@@ -275,6 +285,11 @@ bridge.on('nexus:blur', () => {
   ;(document.activeElement as HTMLElement)?.blur()
 })
 
+bridge.on('nexus:collapse', () => {
+  collapsed.value = !collapsed.value
+  expandedMethod.value = collapsed.value ? '' : activeMethod.value
+})
+
 bridge.on('nexus:clear', () => {
   clearCard()
   selectedBank.value = ''
@@ -311,30 +326,17 @@ bridge.on('nexus:tokenize', async (message) => {
       return
     }
 
-    try {
-      const response = await fetch('/v1/tokens', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_secret: payload.clientSecret,
-          card: {
-            number: number.value.replace(/\D/g, ''),
-            exp_month: parseInt(expiry.value.slice(0, 2), 10),
-            exp_year: 2000 + parseInt(expiry.value.slice(3, 5), 10),
-            cvc: cvc.value,
-          },
-          billing_details: billingDetails,
-        }),
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        bridge.send('nexus:token-result', { error: data.error ?? { type: 'api_error', message: 'Tokenization failed.' } })
-      } else {
-        bridge.send('nexus:token-result', { token: data.token, paymentMethodId: data.payment_method_id })
-      }
-    } catch {
-      bridge.send('nexus:token-result', { error: { type: 'network_error', message: 'A network error occurred.' } })
-    }
+    await publishTokenResult({
+      client_secret: payload.clientSecret,
+      card: {
+        number: number.value.replace(/\D/g, ''),
+        exp_month: parseInt(expiry.value.slice(0, 2), 10),
+        exp_year: 2000 + parseInt(expiry.value.slice(3, 5), 10),
+        cvc: cvc.value,
+      },
+      billing_details: billingDetails,
+      setup_future_usage: saveCard.value ? 'off_session' : undefined,
+    })
     return
   }
 
@@ -345,33 +347,32 @@ bridge.on('nexus:tokenize', async (message) => {
     return
   }
 
-  try {
-    const response = await fetch('/v1/tokens', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_secret: payload.clientSecret,
-        payment_method_type: activeMethod.value,
-        [activeMethod.value]: { bank: selectedBank.value },
-        billing_details: billingDetails,
-      }),
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      bridge.send('nexus:token-result', { error: data.error ?? { type: 'api_error', message: 'Tokenization failed.' } })
-    } else {
-      bridge.send('nexus:token-result', { token: data.token, paymentMethodId: data.payment_method_id })
-    }
-  } catch {
-    bridge.send('nexus:token-result', { error: { type: 'network_error', message: 'A network error occurred.' } })
-  }
+  await publishTokenResult({
+    client_secret: payload.clientSecret,
+    payment_method_type: activeMethod.value,
+    [activeMethod.value]: { bank: selectedBank.value },
+    billing_details: billingDetails,
+  })
 })
 
 const brandIconHtml = computed(() => getBrandIcon(brand.value) ?? '💳')
 </script>
 
 <template>
-  <div class="nexus-payment-element">
+  <div class="nexus-payment-element" :class="{ 'nexus-payment-element--collapsed': collapsed }" :style="{ zIndex: 'var(--nexus-z-index, auto)' }">
+    <div v-if="showLink" class="nexus-link-embed">
+      <p class="nexus-label">{{ t('linkTitle') }}</p>
+      <input
+        class="nexus-input"
+        type="email"
+        autocomplete="email"
+        :aria-label="t('linkEmailLabel')"
+        :placeholder="t('linkEmailPlaceholder')"
+        :value="linkEmail"
+        @input="linkEmail = ($event.target as HTMLInputElement).value"
+      />
+      <p class="nexus-hint">{{ t('linkEmbeddedHint') }}</p>
+    </div>
     <!-- saved payment methods -->
     <div v-if="savedMethods.length > 0" class="nexus-saved-list">
       <p class="nexus-label nexus-saved-title">{{ t('savedCards') }}</p>
@@ -472,7 +473,7 @@ const brandIconHtml = computed(() => getBrandIcon(brand.value) ?? '💳')
               @paste="onPaste"
             />
           </div>
-          <p v-if="cardError" class="nexus-error" role="alert">{{ cardError.message }}</p>
+          <p v-if="cardError" class="nexus-error" role="alert" aria-live="polite">{{ cardError.message }}</p>
         </template>
         <template v-else>
           <label class="nexus-label" for="nexus-bank">{{ t('selectBankLabel') }}</label>
@@ -556,7 +557,7 @@ const brandIconHtml = computed(() => getBrandIcon(brand.value) ?? '💳')
                 @paste="onPaste"
               />
             </div>
-            <p v-if="cardError" class="nexus-error" role="alert">{{ cardError.message }}</p>
+            <p v-if="cardError" class="nexus-error" role="alert" aria-live="polite">{{ cardError.message }}</p>
           </template>
           <template v-else>
             <label class="nexus-label" for="nexus-bank-accordion">{{ t('selectBankLabel') }}</label>
@@ -642,7 +643,7 @@ const brandIconHtml = computed(() => getBrandIcon(brand.value) ?? '💳')
                 @paste="onPaste"
               />
             </div>
-            <p v-if="cardError" class="nexus-error" role="alert">{{ cardError.message }}</p>
+            <p v-if="cardError" class="nexus-error" role="alert" aria-live="polite">{{ cardError.message }}</p>
           </template>
           <template v-else>
             <label class="nexus-label" for="nexus-bank-radio">{{ t('selectBankLabel') }}</label>
@@ -661,6 +662,18 @@ const brandIconHtml = computed(() => getBrandIcon(brand.value) ?? '💳')
         </div>
       </div>
     </template>
+
+    <label v-if="allowSave && activeMethod === 'card' && !selectedSaved" class="nexus-checkbox">
+      <input
+        type="checkbox"
+        class="nexus-checkbox-input"
+        :class="{ 'nexus-checkbox-input--checked': saveCard }"
+        :checked="saveCard"
+        :aria-label="t('ariaSaveCard')"
+        @change="saveCard = ($event.target as HTMLInputElement).checked"
+      />
+      <span>{{ t('saveCard') }}</span>
+    </label>
 
     <!-- billing details (PE-010 / PE-011) -->
     <div
@@ -704,7 +717,7 @@ const brandIconHtml = computed(() => getBrandIcon(brand.value) ?? '💳')
         @focus="onFocus('billingPhone')"
         @blur="onBlur"
       />
-      <p v-if="emailInvalid" class="nexus-error" role="alert">{{ t('emailInvalid') }}</p>
+      <p v-if="emailInvalid" class="nexus-error" role="alert" aria-live="polite">{{ t('emailInvalid') }}</p>
     </div>
     </template>
   </div>
@@ -842,6 +855,33 @@ select.nexus-input {
   flex-shrink: 0;
 }
 
+.nexus-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: var(--nexus-font-size-sm, 13px);
+  color: var(--nexus-color-text, #30313d);
+}
+.nexus-checkbox-input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--nexus-color-primary, #635bff);
+}
+.nexus-checkbox-input--checked {
+  outline: var(--nexus-outline, none);
+}
+.nexus-link-embed {
+  margin-bottom: 10px;
+}
+.nexus-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--nexus-color-text-secondary, #6b7280);
+}
+.nexus-payment-element--collapsed .nexus-block {
+  display: none;
+}
 .nexus-error {
   margin-top: 6px;
   font-size: 13px;

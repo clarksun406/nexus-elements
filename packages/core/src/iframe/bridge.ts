@@ -1,87 +1,61 @@
+import {
+  createMessage,
+  randomSecret,
+  redactSensitive,
+  verifyMessage,
+  type SignedEnvelope,
+} from './channel'
 import type { BridgeMessage, BridgeMessageType } from '../types/bridge'
 
-const SIGNING_KEY_PREFIX = 'nexus_bridge_'
+export { createMessage, signMessage, verifyMessage, timingSafeEqual, canonicalBody } from './channel'
 
-let messageCounter = 0
-
-export function generateMessageId(): string {
-  return `msg_${++messageCounter}_${Math.random().toString(36).slice(2, 10)}`
-}
-
-const hmacKeyCache = new Map<string, CryptoKey>()
-
-async function getHmacKey(signingKey: string): Promise<CryptoKey> {
-  const cached = hmacKeyCache.get(signingKey)
-  if (cached) return cached
-  const keyMaterial = new TextEncoder().encode(`${SIGNING_KEY_PREFIX}${signingKey}`)
-  const key = await crypto.subtle.importKey('raw', keyMaterial, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
-  hmacKeyCache.set(signingKey, key)
-  return key
-}
-
-function bufferToHex(buffer: ArrayBuffer): string {
-  return Array.from(new Uint8Array(buffer))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
-}
-
-export async function signMessage(payload: string, key: string): Promise<string> {
-  const hmacKey = await getHmacKey(key)
-  const signature = await crypto.subtle.sign('HMAC', hmacKey, new TextEncoder().encode(payload))
-  return `sig_${bufferToHex(signature)}`
-}
-
-export async function verifyMessage(message: BridgeMessage, key: string): Promise<boolean> {
-  const payload = JSON.stringify({ id: message.id, type: message.type, elementId: message.elementId, payload: message.payload })
-  return message.signature === (await signMessage(payload, key))
-}
-
-export async function createMessage<T>(
-  type: BridgeMessageType,
-  elementId: string,
-  payload: T,
-  key: string,
-): Promise<BridgeMessage<T>> {
-  const id = generateMessageId()
-  const body = JSON.stringify({ id, type, elementId, payload })
-  return {
-    version: 1,
-    id,
-    type,
-    elementId,
-    payload,
-    signature: await signMessage(body, key),
-    timestamp: Date.now(),
-  }
-}
+const REPLAY_TTL_MS = 2 * 60_000
+const REPLAY_MAX = 500
 
 type MessageHandler = (message: BridgeMessage) => void
 
+export interface ChannelBootstrap {
+  secret: string
+  groupId: string
+  groupKey: string
+}
+
 export class IframeBridge {
   private iframes = new Map<string, HTMLIFrameElement>()
+  private origins = new Map<string, string>()
   private handlers = new Map<string, Set<MessageHandler>>()
   private globalHandlers = new Set<MessageHandler>()
-  private targetOrigin = '*'
-  private signingKey: string
+  private seen = new Map<string, number>()
   private listener: ((event: MessageEvent) => void) | null = null
+  private readonly bootstrap: ChannelBootstrap
 
-  constructor(signingKey: string) {
-    this.signingKey = signingKey
+  constructor(_ignoredPublishableKey?: string, bootstrap?: ChannelBootstrap) {
+    this.bootstrap = bootstrap ?? {
+      secret: randomSecret(),
+      groupId: `grp_${randomSecret(8)}`,
+      groupKey: randomSecret(),
+    }
   }
 
-  attach(elementId: string, iframe: HTMLIFrameElement, fieldsOrigin?: string): void {
+  /** Random channel secret. Never the publishable key, and never rotated by nexus:init. */
+  getBootstrap(): ChannelBootstrap {
+    return this.bootstrap
+  }
+
+  attach(elementId: string, iframe: HTMLIFrameElement, fieldsOrigin: string): void {
     this.iframes.set(elementId, iframe)
-    if (fieldsOrigin) {
-      this.targetOrigin = fieldsOrigin
-    }
+    this.origins.set(elementId, fieldsOrigin)
     if (!this.listener) {
-      this.listener = (event: MessageEvent) => this.handleIncoming(event)
+      this.listener = (event: MessageEvent) => {
+        void this.handleIncoming(event)
+      }
       window.addEventListener('message', this.listener)
     }
   }
 
   detach(elementId: string): void {
     this.iframes.delete(elementId)
+    this.origins.delete(elementId)
     for (const key of this.handlers.keys()) {
       if (key.endsWith(`:${elementId}`)) {
         this.handlers.delete(key)
@@ -97,8 +71,11 @@ export class IframeBridge {
 
   async send<T>(type: BridgeMessageType, elementId: string, payload: T): Promise<void> {
     const cleanPayload = JSON.parse(JSON.stringify(payload)) as T
-    const message = await createMessage(type, elementId, cleanPayload, this.signingKey)
-    this.iframes.get(elementId)?.contentWindow?.postMessage(message, this.targetOrigin)
+    const message = await createMessage(type, elementId, cleanPayload, this.bootstrap.secret)
+    const iframe = this.iframes.get(elementId)
+    const origin = this.origins.get(elementId)
+    if (!iframe?.contentWindow || !origin) return
+    iframe.contentWindow.postMessage(message, origin)
   }
 
   sendAndWait<TReq, TRes>(
@@ -145,15 +122,35 @@ export class IframeBridge {
     this.globalHandlers.add(handler)
   }
 
-  private handleIncoming(event: MessageEvent): void {
-    const message = event.data as BridgeMessage
-    if (!message || message.version !== 1 || !message.type?.startsWith('nexus:')) return
+  private remember(id: string, timestamp: number): boolean {
+    const cutoff = timestamp - REPLAY_TTL_MS
+    if (this.seen.size > REPLAY_MAX) {
+      for (const [seenId, seenAt] of this.seen) {
+        if (seenAt < cutoff) this.seen.delete(seenId)
+      }
+    }
+    if (this.seen.has(id)) return false
+    this.seen.set(id, timestamp)
+    return true
+  }
 
-    void verifyMessage(message, this.signingKey).then((valid) => {
-      if (!valid) return
-      const key = `${message.type}:${message.elementId}`
-      this.handlers.get(key)?.forEach((handler) => handler(message))
-      this.globalHandlers.forEach((handler) => handler(message))
-    })
+  private async handleIncoming(event: MessageEvent): Promise<void> {
+    const message = event.data as BridgeMessage
+    if (!message || message.version !== 1 || typeof message.type !== 'string' || !message.type.startsWith('nexus:')) return
+
+    const iframe = this.iframes.get(message.elementId)
+    const origin = this.origins.get(message.elementId)
+    if (!iframe || !origin) return
+    if (event.origin !== origin) return
+    if (event.source !== iframe.contentWindow) return
+
+    const valid = await verifyMessage(message as SignedEnvelope, this.bootstrap.secret)
+    if (!valid) return
+    if (!this.remember(message.id, message.timestamp)) return
+
+    const safe = { ...message, payload: redactSensitive(message.payload) }
+    const key = `${message.type}:${message.elementId}`
+    this.handlers.get(key)?.forEach((handler) => handler(safe))
+    this.globalHandlers.forEach((handler) => handler(safe))
   }
 }

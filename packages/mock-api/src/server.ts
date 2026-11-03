@@ -18,7 +18,9 @@ export function createMockServer(options: MockServerOptions = {}): Promise<Serve
 
   return new Promise<Server>((resolve) => {
     server.listen(port, host, () => {
-      console.log(`[mock-api] Server running at http://${host}:${port}`)
+      const address = server.address()
+      const bound = address && typeof address !== 'string' ? address.port : port
+      console.log(`[mock-api] Server running at http://${host}:${bound}`)
       resolve(server)
     })
   })

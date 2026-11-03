@@ -24,6 +24,8 @@ export type BridgeMessageType =
   | 'nexus:token-result'
   | 'nexus:brand'
   | 'nexus:resize'
+  | 'nexus:collapse'
+  | 'nexus:fetch-updates'
 
 export interface BridgeMessage<T = unknown> {
   version: 1
@@ -54,4 +56,6 @@ export interface InitPayload {
   appearance: ResolvedAppearancePayload
   locale: string
   fonts?: Array<{ family: string; src: string; weight?: string; style?: string }>
+  apiBase?: string
+  nexusAccount?: string
 }

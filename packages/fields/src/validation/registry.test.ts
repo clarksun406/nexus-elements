@@ -3,8 +3,13 @@ import { registerValidator, getValidator, validate, getRegisteredTypes, type Val
 
 describe('validator registry', () => {
   describe('built-in validators', () => {
-    it('pre-registers cardNumber, cardExpiry, cardCvc, iban, bsb', () => {
+    it('pre-registers cardNumber, cardExpiry, cardCvc, iban, bsb, postalCode', () => {
       const types = getRegisteredTypes()
+      expect(types).toContain('postalCode')
+      expect(validate('postalCode', '10001', { country: 'US' }).isValid).toBe(true)
+      expect(validate('postalCode', 'ABC', { country: 'US' }).isValid).toBe(false)
+      expect(validate('postalCode', '', { country: 'US' }).isComplete).toBe(false)
+      expect(validate('postalCode', 'SW1A 1AA', { country: 'GB' }).isValid).toBe(true)
       expect(types).toContain('cardNumber')
       expect(types).toContain('cardExpiry')
       expect(types).toContain('cardCvc')

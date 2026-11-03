@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest'
-import { t, setLocale, locale, validationMessages } from './index'
+import { t, setLocale, ensureLocale, locale, validationMessages, messageKeyCount } from './index'
 
 describe('i18n', () => {
   beforeEach(() => {
@@ -53,20 +53,24 @@ describe('i18n', () => {
       expect(t('cvcLabel')).toBe('Security code')
     })
 
-    it('returns Chinese strings after setLocale("zh")', () => {
-      setLocale('zh')
+    it('returns Chinese strings after setLocale("zh")', async () => {
+      await ensureLocale('zh')
       expect(t('cardInvalid')).toBeTruthy()
       expect(t('cardInvalid')).not.toBe('Your card number is invalid.')
     })
 
     it.each(['ja', 'ko', 'de', 'fr', 'es', 'it', 'pt', 'nl'])(
       'returns non-English strings for locale "%s"',
-      (loc) => {
-        setLocale(loc)
+      async (loc) => {
+        await ensureLocale(loc)
         expect(t('cardInvalid')).toBeTruthy()
         expect(t('cardInvalid')).not.toBe('Your card number is invalid.')
       },
     )
+
+    it('covers the PRD-scale message catalog', () => {
+      expect(messageKeyCount()).toBeGreaterThanOrEqual(200)
+    })
 
     it('returns a non-empty string for every key', () => {
       const keys: (keyof import('./index').Dictionary)[] = [
@@ -89,8 +93,8 @@ describe('i18n', () => {
       expect(validationMessages.value.cardInvalid).toBe('Your card number is invalid.')
     })
 
-    it('switches to Chinese messages', () => {
-      setLocale('zh')
+    it('switches to Chinese messages', async () => {
+      await ensureLocale('zh')
       expect(validationMessages.value.cardInvalid).not.toBe('Your card number is invalid.')
     })
 

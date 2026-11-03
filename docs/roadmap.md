@@ -18,7 +18,7 @@
 | [Phase 1：核心基础](#phase-1核心基础) | ✅ 完成 | SDK 骨架、iframe 桥、主题引擎、Card 全组件、confirmCardPayment 全链路 |
 | [Phase 2：聚合支付](#phase-2聚合支付) | ✅ 完成 | Payment Element、Express Checkout、Address、Embedded Checkout |
 | [Phase 3：银行与区域支付](#phase-3银行与区域支付) | ✅ 完成 | 6 种银行组件、Redirect Checkout、银行 E2E |
-| [Phase 4：辅助组件 + 生态](#phase-4辅助组件--生态) | ✅ 完成 | 辅助组件、CDN 加载、i18n（10 locale）、Storybook、Element 级样式、校验器注册表、WCAG、单测 169 |
+| [Phase 4：辅助组件 + 生态](#phase-4辅助组件--生态) | ✅ 完成 | 辅助组件、CDN 加载、i18n（23 locale，232 条文案）、Storybook 58 stories、校验器含 postalCode、单测 226 |
 | [Phase 5（规划）](#phase-5规划) | 🔶 进行中 | 生产部署项、品牌图标 ✅、字体加载 ✅、locale 扩展 ✅、postal code ✅ |
 | [Phase 6：Appearance API 增强](#phase-6appearance-api-增强) | ✅ 完成 | 变量 14→21 ✅、规则选择器 10→18 ✅、placeholder/icon CSS 变量化 ✅ |
 
@@ -37,7 +37,7 @@
 | Card 组件 | 合并卡 + 拆分三字段（cardNumber / cardExpiry / cardCvc），格式化 / 粘贴 / 品牌图标 |
 | 确认链路 | `confirmCardPayment` → tokenize → POST /v1/payment_intents/confirm → 3DS 自动跳转 |
 | Vue 适配层 | NexusElementsProvider + 具名组件 + composables（useNexus / useElements / useElement） |
-| 包体积 | SDK 总计 66.3 KB gzip（core 5.2 + fields JS 51 + CSS 4.4） |
+| 包体积 | 计量合计 47.14 KB gzip（core ESM 7.11 + IIFE 6.43 + fields 入口 33.48 + 共享 CSS 0.11）。字段按组件与语言拆包 |
 
 ---
 
@@ -102,7 +102,7 @@
 | 能力 | 优先级 | 说明 |
 |------|--------|------|
 | 生产独立域部署 | P0 | SEC-005：fields 独立域部署（非同源），SEC-006/007 CSP + X-Frame-Options |
-| ~~应用层加密~~ | ~~P1~~ ⏸️ | TOK-002：暂缓。iframe 隔离 + TLS 已是行业标准（Stripe/Braintree/Adyen 均如此），客户端加密增加复杂度但安全收益极小，解密密钥仍在服务端。 |
+| 应用层加密 | ✅ | TOK-002：字段层 RSA-OAEP + AES-256-GCM，公钥来自 `GET /v1/encryption_key`。详见 docs/security.md |
 | 后端 Mock 模块 | P1 ✅ | `@nexus-elements/mock-api` 独立包：Vite 插件 / 独立 HTTP 服务器 / Storybook 集成，MockStore 状态重置，13 路由全覆盖 |
 | 真实品牌图标 | P2 ✅ | CE-003：10 个卡品牌内联 SVG 图标，`v-html` 渲染，💳 未知品牌 fallback |
 | 字体加载 | P2 ✅ | `fonts` 选项：`@font-face` CSS 注入 iframe，`--nexus-font-family` 自动设置 |
@@ -212,8 +212,8 @@
 
 | 指标 | 当前 | 目标 |
 |------|------|------|
-| 单元测试 | 169 | 维持 > 150 |
-| E2E 脚本 | 19 个 Playwright | 覆盖全部 19 组件 + Appearance API |
+| 单元测试 | 226（core 90 / fields 131 / vue 2 / mock-api 3） | 行覆盖 core 96.7%、fields 87.0% |
+| E2E | 17 个 `@playwright/test`（`tests/e2e/*.spec.ts`） | `pnpm e2e` 自动启动 dev server；含伪造 / 跨源 postMessage |
 | TypeScript | 4 包 strict 零错误 | 维持 |
 | 包体积 | 66.3 KB gzip | < 80 KB（自动校验） |
 | Storybook | 9 分类 / 60+ 变体 | 维持 |

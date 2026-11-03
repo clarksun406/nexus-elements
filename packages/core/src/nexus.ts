@@ -1,5 +1,7 @@
 import { NexusElement } from './element'
 import { NexusElements } from './elements'
+import { ELEMENT_SANDBOX } from './iframe/manager'
+import { followRedirect } from './navigation'
 import type {
   ConfirmCardPaymentParams,
   ConfirmPaymentParams,
@@ -18,6 +20,7 @@ export class Nexus {
   readonly publishableKey: string
   private apiBase: string
   private fieldsUrl?: string
+  private nexusAccount?: string
 
   constructor(publishableKey: string, options: NexusOptions = {}) {
     if (!publishableKey.startsWith('pk_test_') && !publishableKey.startsWith('pk_live_')) {
@@ -25,6 +28,8 @@ export class Nexus {
     }
     this.publishableKey = publishableKey
     this.apiBase = options.apiBase ?? ''
+    this.fieldsUrl = options.fieldsUrl
+    this.nexusAccount = options.nexusAccount
   }
 
   setFieldsUrl(url: string): void {
@@ -32,7 +37,21 @@ export class Nexus {
   }
 
   elements(options: ElementsOptions = {}): NexusElements {
-    return new NexusElements(this.publishableKey, options, this.fieldsUrl)
+    return new NexusElements(this.publishableKey, options, {
+      fieldsUrl: this.fieldsUrl,
+      apiBase: this.apiBase,
+      nexusAccount: this.nexusAccount,
+    })
+  }
+
+  private apiHeaders(clientSecret?: string): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Nexus-Key': this.publishableKey,
+    }
+    if (clientSecret) headers['X-Nexus-Client-Secret'] = clientSecret
+    if (this.nexusAccount) headers['X-Nexus-Account'] = this.nexusAccount
+    return headers
   }
 
   async confirmCardPayment(
@@ -55,11 +74,7 @@ export class Nexus {
     try {
       const response = await fetch(`${this.apiBase}/v1/payment_intents/confirm`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Nexus-Key': this.publishableKey,
-          'X-Nexus-Client-Secret': clientSecret,
-        },
+        headers: this.apiHeaders(clientSecret),
         body: JSON.stringify({
           payment_method_token: tokenizeResult.token ?? tokenizeResult.paymentMethodId,
           receipt_email: params.receipt_email,
@@ -83,7 +98,7 @@ export class Nexus {
       const paymentIntent = data.payment_intent as PaymentIntent
 
       if (paymentIntent.status === 'requires_action' && data.next_action?.redirect_url) {
-        window.location.href = data.next_action.redirect_url
+        followRedirect(data.next_action.redirect_url)
       }
 
       return { paymentIntent }
@@ -133,11 +148,7 @@ export class Nexus {
     try {
       const response = await fetch(`${this.apiBase}/v1/payment_intents/confirm`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Nexus-Key': this.publishableKey,
-          'X-Nexus-Client-Secret': clientSecret,
-        },
+        headers: this.apiHeaders(clientSecret),
         body: JSON.stringify({
           payment_method_token: paymentMethodToken,
           return_url: params.confirmParams?.return_url,
@@ -162,7 +173,7 @@ export class Nexus {
 
       if (paymentIntent.status === 'requires_action' && params.redirect !== 'if_required') {
         if (data.next_action?.redirect_url) {
-          window.location.href = data.next_action.redirect_url
+          followRedirect(data.next_action.redirect_url)
           return { paymentIntent }
         }
       }
@@ -202,11 +213,7 @@ export class Nexus {
     try {
       const response = await fetch(`${this.apiBase}/v1/setup_intents/confirm`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Nexus-Key': this.publishableKey,
-          'X-Nexus-Client-Secret': clientSecret,
-        },
+        headers: this.apiHeaders(clientSecret),
         body: JSON.stringify({
           payment_method_token: tokenizeResult.token ?? tokenizeResult.paymentMethodId,
           return_url: params.confirmParams.return_url,
@@ -258,14 +265,20 @@ export class Nexus {
         iframe.style.width = '100%'
         iframe.style.height = '100%'
         iframe.style.border = 'none'
-        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-top-navigation')
+        iframe.setAttribute('sandbox', ELEMENT_SANDBOX)
+        iframe.setAttribute('referrerpolicy', 'no-referrer')
         container.appendChild(iframe)
+        const checkoutOrigin = new URL(iframe.src, window.location.href).origin
 
         listener = (event: MessageEvent) => {
           if (!iframe || event.source !== iframe.contentWindow) return
-          const data = event.data as { type?: string; session?: { id: string; status: string; payment_intent?: string } }
+          if (event.origin !== checkoutOrigin) return
+          const data = event.data as { type?: string; url?: string; session?: { id: string; status: string; payment_intent?: string } }
           if (data?.type === 'nexus:checkout-complete' && data.session) {
             options.onComplete?.(data.session)
+          }
+          if (data?.type === 'nexus:checkout-redirect' && data.url) {
+            followRedirect(data.url)
           }
         }
         window.addEventListener('message', listener)
@@ -279,7 +292,7 @@ export class Nexus {
     if (!session.url) {
       throw new Error('Checkout session has no URL.')
     }
-    window.location.href = session.url
+    followRedirect(session.url)
   }
 
   private findMountedElements(elements: NexusElements): NexusElement[] {

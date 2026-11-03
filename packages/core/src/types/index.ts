@@ -41,6 +41,12 @@ export interface NexusOptions {
   nexusAccount?: string
   locale?: SupportedLocale
   apiBase?: string
+  /** Absolute URL of the fields iframe host. Production should be a separate origin. */
+  fieldsUrl?: string
+  /** When set, loadNexus injects this script (defaults to the Nexus CDN if `cdn` is true). */
+  scriptUrl?: string
+  cdn?: boolean
+  integrity?: string
 }
 
 export interface AppearanceVariables {
@@ -65,6 +71,10 @@ export interface AppearanceVariables {
   spacingGridRow?: string
   spacingGridColumn?: string
   gridGutter?: string
+  /** Focus outline. Applied as `--nexus-outline`. */
+  outline?: string
+  /** Stacking order for popovers inside the frame. Applied as `--nexus-z-index`. */
+  zIndex?: string
 }
 
 export interface Appearance {

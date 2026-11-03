@@ -29,6 +29,16 @@ export function fieldsServerPlugin(): Plugin {
 
         const ext = extname(filePath)
         res.setHeader('Content-Type', MIME_TYPES[ext] ?? 'application/octet-stream')
+        res.setHeader('X-Content-Type-Options', 'nosniff')
+        res.setHeader('Referrer-Policy', 'no-referrer')
+        if (ext === '.html') {
+          const ancestors = process.env['NEXUS_FRAME_ANCESTORS'] ?? "'self' http://localhost:* http://127.0.0.1:*"
+          const connect = process.env['NEXUS_CONNECT_SRC'] ?? "'self'"
+          res.setHeader(
+            'Content-Security-Policy',
+            `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ${connect}; frame-ancestors ${ancestors}; base-uri 'none'`,
+          )
+        }
         res.end(readFileSync(filePath))
       }) as Connect.Handle)
     },

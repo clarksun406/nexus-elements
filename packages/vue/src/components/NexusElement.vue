@@ -65,6 +65,8 @@ defineExpose({
   focus: () => element?.focus(),
   blur: () => element?.blur(),
   clear: () => element?.clear(),
+  collapse: () => element?.collapse(),
+  fetchUpdates: () => element?.fetchUpdates(),
 })
 </script>
 

@@ -1,60 +1,59 @@
 <script setup lang="ts">
-import { shallowRef, onMounted } from 'vue'
+import { shallowRef, onMounted, type Component } from 'vue'
 import { bridge } from './bridge'
 import { applyAppearance, applyFonts } from './appearance'
-import { setLocale } from './i18n'
+import { ensureLocale, t } from './i18n'
+import { configureApi } from './api/client'
+import { startGroupChannel } from './secure/group-channel'
 import type { InitPayload, ResolvedAppearancePayload } from './bridge/types'
-import CardField from './fields/CardField.vue'
-import CardNumberField from './fields/CardNumberField.vue'
-import CardExpiryField from './fields/CardExpiryField.vue'
-import CardCvcField from './fields/CardCvcField.vue'
-import PaymentField from './fields/PaymentField.vue'
-import ExpressCheckoutField from './fields/ExpressCheckoutField.vue'
-import AddressField from './fields/AddressField.vue'
-import IdealBankField from './fields/IdealBankField.vue'
-import FpxBankField from './fields/FpxBankField.vue'
-import EpsBankField from './fields/EpsBankField.vue'
-import P24BankField from './fields/P24BankField.vue'
-import IbanField from './fields/IbanField.vue'
-import AuBankAccountField from './fields/AuBankAccountField.vue'
-import PaymentMessagingField from './fields/PaymentMessagingField.vue'
-import LinkAuthenticationField from './fields/LinkAuthenticationField.vue'
-import CartField from './fields/CartField.vue'
-import OrderField from './fields/OrderField.vue'
-import AfterpayClearpayField from './fields/AfterpayClearpayField.vue'
-import WalletButtonField from './fields/WalletButtonField.vue'
 
-const FIELD_COMPONENTS: Record<string, typeof CardField> = {
-  card: CardField,
-  cardNumber: CardNumberField,
-  cardExpiry: CardExpiryField,
-  cardCvc: CardCvcField,
-  payment: PaymentField,
-  expressCheckout: ExpressCheckoutField,
-  address: AddressField as unknown as typeof CardField,
-  idealBank: IdealBankField as unknown as typeof CardField,
-  fpxBank: FpxBankField as unknown as typeof CardField,
-  epsBank: EpsBankField as unknown as typeof CardField,
-  p24Bank: P24BankField as unknown as typeof CardField,
-  iban: IbanField as unknown as typeof CardField,
-  auBankAccount: AuBankAccountField as unknown as typeof CardField,
-  paymentMethodMessaging: PaymentMessagingField as unknown as typeof CardField,
-  linkAuthentication: LinkAuthenticationField as unknown as typeof CardField,
-  cart: CartField as unknown as typeof CardField,
-  order: OrderField as unknown as typeof CardField,
-  afterpayClearpay: AfterpayClearpayField as unknown as typeof CardField,
-  walletButton: WalletButtonField as unknown as typeof CardField,
+const FIELD_LOADERS: Record<string, () => Promise<{ default: Component }>> = {
+  card: () => import('./fields/CardField.vue'),
+  cardNumber: () => import('./fields/CardNumberField.vue'),
+  cardExpiry: () => import('./fields/CardExpiryField.vue'),
+  cardCvc: () => import('./fields/CardCvcField.vue'),
+  payment: () => import('./fields/PaymentField.vue'),
+  expressCheckout: () => import('./fields/ExpressCheckoutField.vue'),
+  address: () => import('./fields/AddressField.vue'),
+  idealBank: () => import('./fields/IdealBankField.vue'),
+  fpxBank: () => import('./fields/FpxBankField.vue'),
+  epsBank: () => import('./fields/EpsBankField.vue'),
+  p24Bank: () => import('./fields/P24BankField.vue'),
+  iban: () => import('./fields/IbanField.vue'),
+  auBankAccount: () => import('./fields/AuBankAccountField.vue'),
+  paymentMethodMessaging: () => import('./fields/PaymentMessagingField.vue'),
+  linkAuthentication: () => import('./fields/LinkAuthenticationField.vue'),
+  cart: () => import('./fields/CartField.vue'),
+  order: () => import('./fields/OrderField.vue'),
+  afterpayClearpay: () => import('./fields/AfterpayClearpayField.vue'),
+  walletButton: () => import('./fields/WalletButtonField.vue'),
 }
 
 const params = new URLSearchParams(window.location.search)
 const elementType = params.get('elementType') ?? 'card'
-const activeField = shallowRef(FIELD_COMPONENTS[elementType] ?? CardField)
+const activeField = shallowRef<Component | null>(null)
+const loadError = shallowRef('')
 
 bridge.init()
+const group = bridge.getGroup()
+if (group) startGroupChannel(group.groupId, group.groupKey)
+
+const loader = FIELD_LOADERS[elementType] ?? FIELD_LOADERS.card
+void loader!().then((mod) => {
+  activeField.value = mod.default
+}).catch(() => {
+  loadError.value = t('loadErrorTitle')
+  void bridge.send('nexus:error', { type: 'loaderror', message: loadError.value })
+})
 
 bridge.on('nexus:init', (message) => {
   const payload = message.payload as InitPayload
-  setLocale(payload.locale)
+  configureApi({
+    apiBase: payload.apiBase,
+    publishableKey: payload.publishableKey,
+    nexusAccount: payload.nexusAccount,
+  })
+  void ensureLocale(payload.locale)
   applyAppearance(payload.appearance)
   applyFonts(payload.fonts)
 })
@@ -65,13 +64,19 @@ bridge.on('nexus:appearance', (message) => {
 
 bridge.on('nexus:update', (message) => {
   const payload = message.payload as { options?: Record<string, unknown> }
+  const appearance = payload.options?.__appearance as ResolvedAppearancePayload | undefined
+  if (appearance?.variables) applyAppearance(appearance)
   const newType = payload.options?.__elementType as string | undefined
-  if (newType && FIELD_COMPONENTS[newType]) {
-    activeField.value = FIELD_COMPONENTS[newType]
+  const next = newType ? FIELD_LOADERS[newType] : undefined
+  if (next) {
+    void next().then((mod) => {
+      activeField.value = mod.default
+    })
   }
 })
 
 onMounted(() => {
+  if (typeof ResizeObserver === 'undefined') return
   let lastHeight = 0
   const observer = new ResizeObserver(() => {
     const height = document.documentElement.scrollHeight
@@ -85,7 +90,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <component :is="activeField" />
+  <p v-if="loadError" class="nexus-error" role="alert" aria-live="assertive">{{ loadError }}</p>
+  <component :is="activeField" v-else-if="activeField" />
 </template>
 
 <style>

@@ -6,7 +6,36 @@ export interface IframeConfig {
   fieldsUrl?: string
 }
 
+/** Scripts + forms + same-origin (BroadcastChannel / fetch). No top-navigation, popups, or pointer lock. */
+export const ELEMENT_SANDBOX = 'allow-scripts allow-same-origin allow-forms'
+
 const DEFAULT_FIELDS_URL = '/__nexus-fields/index.html'
+
+export interface FieldsLocation {
+  src: string
+  origin: string
+}
+
+export function resolveFieldsLocation(config: IframeConfig, bridge: Pick<IframeBridge, 'getBootstrap'> | { getBootstrap?: () => ReturnType<IframeBridge['getBootstrap']> }): FieldsLocation {
+  const bootstrap = bridge.getBootstrap?.() ?? {
+    secret: '00',
+    groupId: 'grp_unconfigured',
+    groupKey: '00',
+  }
+  const base = config.fieldsUrl ?? DEFAULT_FIELDS_URL
+  const url = new URL(base, window.location.href)
+  url.searchParams.set('elementType', config.elementType)
+  url.searchParams.set('elementId', config.elementId)
+  const token = encodeURIComponent(JSON.stringify({
+    v: 1,
+    k: bootstrap.secret,
+    g: bootstrap.groupId,
+    gk: bootstrap.groupKey,
+    p: window.location.origin,
+  }))
+  url.hash = `nexus=${token}`
+  return { src: url.toString(), origin: url.origin }
+}
 
 export function createElementIframe(
   config: IframeConfig,
@@ -14,8 +43,10 @@ export function createElementIframe(
   options: Record<string, unknown>,
 ): HTMLIFrameElement {
   const iframe = document.createElement('iframe')
+  const location = resolveFieldsLocation(config, bridge)
 
-  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms')
+  iframe.setAttribute('sandbox', ELEMENT_SANDBOX)
+  iframe.setAttribute('referrerpolicy', 'no-referrer')
   iframe.setAttribute('allowtransparency', 'true')
   iframe.setAttribute('frameborder', '0')
   iframe.setAttribute('scrolling', 'no')
@@ -25,9 +56,7 @@ export function createElementIframe(
   iframe.style.width = '100%'
   iframe.style.display = 'block'
   iframe.style.visibility = 'hidden'
-
-  const src = config.fieldsUrl ?? DEFAULT_FIELDS_URL
-  iframe.src = `${src}?elementType=${encodeURIComponent(config.elementType)}&elementId=${encodeURIComponent(config.elementId)}`
+  iframe.src = location.src
 
   iframe.addEventListener('load', () => {
     iframe.style.visibility = 'visible'
@@ -35,6 +64,11 @@ export function createElementIframe(
   })
 
   return iframe
+}
+
+export function fieldsOriginFor(config: IframeConfig): string {
+  const base = config.fieldsUrl ?? DEFAULT_FIELDS_URL
+  return new URL(base, window.location.href).origin
 }
 
 export function destroyIframe(iframe: HTMLIFrameElement | null): void {

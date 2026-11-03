@@ -5,8 +5,16 @@ export function createNexus(publishableKey: string, options?: NexusOptions): Nex
   return new Nexus(publishableKey, options)
 }
 
-export function loadNexus(publishableKey: string, options?: NexusOptions): Promise<Nexus> {
-  return Promise.resolve(new Nexus(publishableKey, options))
+export async function loadNexus(publishableKey: string, options?: NexusOptions): Promise<Nexus> {
+  const scriptUrl = options?.scriptUrl ?? (options?.cdn ? SDK_CDN_URL : undefined)
+  if (scriptUrl) {
+    await loadScript({ url: scriptUrl, integrity: options?.integrity })
+    const globalNexus = (window as unknown as { Nexus?: { createNexus?: typeof createNexus } }).Nexus
+    if (typeof globalNexus?.createNexus === 'function') {
+      return globalNexus.createNexus(publishableKey, options)
+    }
+  }
+  return createNexus(publishableKey, options)
 }
 
 const SDK_CDN_URL = 'https://js.nexuspay.com/v1/nexus.js'
