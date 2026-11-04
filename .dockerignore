@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+**/dist
+**/coverage
+.git
+tests
+e2e-screenshots
+playwright-report
+test-results
+storybook-static
+*.log
+.env
+.env.*
+!.env.example

@@ -1,6 +1,7 @@
 import type { ServerResponse } from 'node:http'
 import type { MockStore } from '../store.js'
 import type { MockToken, MockPaymentIntent } from '../types.js'
+import { validateAmount } from '@nexus-elements/contracts'
 import { DECLINE_CARDS, THREE_DS_CARD, SAVED_PAYMENT_METHODS } from '../constants.js'
 import { json, errorResponse } from '../utils.js'
 
@@ -31,12 +32,12 @@ export function validateAndConsumeToken(
 }
 
 export function handleCreatePaymentIntent(store: MockStore, res: ServerResponse, body: Record<string, unknown>): void {
-  const amount = body.amount as number
-  const currency = body.currency as string
-
-  if (!amount || !Number.isInteger(amount) || amount <= 0) {
-    return errorResponse(res, 400, 'validation_error', 'invalid_amount', '金额必须为正整数（最小单位）。')
+  const amountResult = validateAmount(body.amount)
+  if (!amountResult.ok) {
+    return errorResponse(res, amountResult.error.status, amountResult.error.type, amountResult.error.code, amountResult.error.message)
   }
+  const amount = amountResult.amount
+  const currency = body.currency as string
 
   const intent: MockPaymentIntent = {
     id: `pi_test_${++store.intentCounter}`,

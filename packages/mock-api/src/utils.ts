@@ -1,28 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
-export function detectBrand(number: string): string {
-  if (number.startsWith('4')) return 'visa'
-  if (/^5[1-5]/.test(number) || /^2[2-7]/.test(number)) return 'mastercard'
-  if (/^3[47]/.test(number)) return 'amex'
-  if (/^62/.test(number)) return 'unionpay'
-  if (/^35/.test(number)) return 'jcb'
-  return 'unknown'
-}
-
-export function luhnValid(number: string): boolean {
-  let sum = 0
-  let alternate = false
-  for (let i = number.length - 1; i >= 0; i--) {
-    let n = number.charCodeAt(i) - 48
-    if (alternate) {
-      n *= 2
-      if (n > 9) n -= 9
-    }
-    sum += n
-    alternate = !alternate
-  }
-  return sum % 10 === 0
-}
+export { detectBrand, luhnValid } from '@nexus-elements/contracts'
 
 export function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resolvePromise, reject) => {

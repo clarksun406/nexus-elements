@@ -1,7 +1,8 @@
 import type { ServerResponse } from 'node:http'
 import type { MockStore } from '../store.js'
 import type { MockToken } from '../types.js'
-import { detectBrand, luhnValid, json, errorResponse } from '../utils.js'
+import { validateCardPayload } from '@nexus-elements/contracts'
+import { json, errorResponse } from '../utils.js'
 import { decryptCard } from '../crypto.js'
 
 export function handleCreateToken(store: MockStore, res: ServerResponse, body: Record<string, unknown>): void {
@@ -34,38 +35,21 @@ export function handleCreateToken(store: MockStore, res: ServerResponse, body: R
     })
   }
 
-  const card = body.card as { number?: string; exp_month?: number; exp_year?: number; cvc?: string } | undefined
-
-  if (!card?.number) {
-    return errorResponse(res, 400, 'validation_error', 'invalid_number', '卡号不能为空。')
+  const validated = validateCardPayload(body.card)
+  if (!validated.ok) {
+    return errorResponse(res, validated.error.status, validated.error.type, validated.error.code, validated.error.message)
   }
-
-  const number = card.number.replace(/\D/g, '')
-  if (number.length < 13 || number.length > 19 || !luhnValid(number)) {
-    return errorResponse(res, 400, 'validation_error', 'invalid_number', '卡号无效，请检查后重试。')
-  }
-
-  if (card.exp_month === undefined || card.exp_year === undefined || !card.cvc) {
-    return errorResponse(res, 400, 'validation_error', 'incomplete_card', '银行卡信息不完整：缺少有效期或安全码。')
-  }
-
-  const now = new Date()
-  if (card.exp_month !== undefined && card.exp_year !== undefined) {
-    const expiry = new Date(card.exp_year, card.exp_month)
-    if (expiry <= now) {
-      return errorResponse(res, 400, 'validation_error', 'invalid_expiry', '您的卡已过期。')
-    }
-  }
+  const card = validated.card
 
   const token: MockToken = {
     token: `tok_test_${++store.tokenCounter}`,
     payment_method_id: `pm_test_${store.tokenCounter}`,
     type: 'card',
-    card_number: number,
-    brand: detectBrand(number),
-    last4: number.slice(-4),
-    exp_month: card.exp_month ?? 12,
-    exp_year: card.exp_year ?? now.getFullYear() + 2,
+    card_number: card.number,
+    brand: card.brand,
+    last4: card.last4,
+    exp_month: card.exp_month,
+    exp_year: card.exp_year,
     billing_details: body.billing_details as Record<string, unknown> | undefined,
     used: false,
     expires_at: Date.now() + 5 * 60 * 1000,

@@ -61,3 +61,11 @@ NEXUS_CONNECT_SRC="'self' https://api.nexuspay.com"
 ```
 
 字段页的 `connect-src` 必须包含 API 源站，否则 iframe 里的 tokenize 请求会被 CSP 拦截。
+
+## 商户后端的 PCI 边界（apps/server）
+
+卡号只在 `POST /v1/tokens` 的请求处理栈里出现：解密（若客户端做了 TOK-002）、Luhn / 品牌识别、测试卡结果分类、HMAC 指纹。落库的是 `last4`、品牌、有效期、分类结果和指纹，不是 PAN，也不是 CVC。日志序列化会把 `number` / `cvc` / `pan` / `encrypted_card` 打成 `[redacted]`。
+
+RSA 私钥优先读 `NEXUS_RSA_PRIVATE_KEY`（生产应来自 KMS / HSM）。未配置时，进程内生成一把沙箱密钥；Postgres 模式下会写入 `encryption_keys`，只为了重启后仍能解开在途密文。这不是生产密钥存储方案。
+
+`apps/server` 对 `/v1/*` 要求 `X-Nexus-Key` 或 `Authorization: Bearer sk_`。`X-Nexus-Account` 若出现，必须等于 `NEXUS_ACCOUNT_ID`。mock-api 不校验这两个头，契约测试统一带上示例公钥。

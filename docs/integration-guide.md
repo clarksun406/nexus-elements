@@ -21,7 +21,35 @@ pnpm add @nexus-elements/vue         # Vue 3 适配层（可选）
 - `POST /v1/payment_intents` — 创建支付意图，返回 `client_secret`
 - `POST /v1/payment_intents/confirm` — 确认支付（SDK 内部调用）
 
-本仓库 `examples/plugins/mock-api.ts` 提供完整 mock 实现（含 tokens、3DS 挑战页），`pnpm dev` 即可联调。
+本仓库有两条实现，行为由 `packages/contracts` 钉在一起：
+
+| 实现 | 用途 | 怎么跑 |
+|------|------|--------|
+| `packages/mock-api` | 示例站点默认后端，纯内存 | `pnpm dev` |
+| `apps/server` | 可部署的 Fastify 服务，Postgres 或内存 | 见下 |
+
+内存模式（不装数据库，密钥与示例站相同）：
+
+```bash
+pnpm --filter @nexus-elements/contracts build
+pnpm --filter @nexus-elements/server build
+STORE=memory PORT=3001 node apps/server/dist/index.js
+```
+
+Postgres：复制 `apps/server/.env.example`，或：
+
+```bash
+docker compose up --build
+# API: http://127.0.0.1:3001/health
+```
+
+把示例站点指到真实后端（不再挂 mock 插件）：
+
+```bash
+NEXUS_API_TARGET=http://127.0.0.1:3001 pnpm --filter examples dev
+```
+
+服务端创建资源用 `Authorization: Bearer sk_test_...`。示例页仍用 `X-Nexus-Key: pk_test_nexus_example_key` 创建 Intent（`ALLOW_PUBLISHABLE_CREATES=true`）。生产环境设 `ALLOW_PUBLISHABLE_CREATES=false`，并且不要使用 `.env.example` 里的示例密钥。测试金字塔见 [testing.md](testing.md)。
 
 ### 1.3 Fields iframe 部署
 

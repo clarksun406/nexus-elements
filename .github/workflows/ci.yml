@@ -7,7 +7,23 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: nexus
+          POSTGRES_PASSWORD: nexus
+          POSTGRES_DB: nexus
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nexus -d nexus"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://nexus:nexus@localhost:5432/nexus
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -18,10 +34,13 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @nexus-elements/contracts build
       - run: pnpm typecheck
+      - run: pnpm --filter @nexus-elements/contracts test
       - run: pnpm test:coverage
       - run: pnpm --filter @nexus-elements/mock-api test
       - run: pnpm --filter @nexus-elements/vue test
       - run: pnpm verify:bundle
       - run: node ./node_modules/@playwright/test/cli.js install --with-deps chromium
       - run: pnpm e2e
+      - run: pnpm e2e:server
