@@ -6,11 +6,11 @@
 
 | 层 | 用例数（Batch 1 后，本地计数） | 内容 |
 |----|--------------------------------|------|
-| 单元 | **~368**（vitest `it`） | core + fields + server（内存）+ contracts 校验 + mock-api + vue；含 `three-ds-handoff.test.ts`、`payment-link-embed.test.ts`、checkout 订阅拒绝 |
+| 单元 | **410**（vitest `it`，分包合计） | core 100 · fields 137 · contracts 4 · server 151 · mock-api 16 · vue 2；含 3DS handoff 生命周期与 Payment Link bridge 单测 |
 | 契约 | **13** 场景 × 2 实现 = **26** 次执行 | `packages/contracts/suite/run.ts` |
 | 集成 | **9**（Postgres，需 `DATABASE_URL`） | 含 3DS `cancelled` 状态迁移 |
 | E2E mock | **20** | 原 17 + 3DS 取消、Link 行、Billing 文案 |
-| E2E server | **6** × 2 配置（memory / Postgres） | `playwright.server.config.ts` |
+| E2E server | **9** × **2** store（memory / Postgres） | card(5) + checkout(2) + `server-critical.spec.ts`(2) |
 
 | 层 | 命令 |
 |----|------|
@@ -21,7 +21,7 @@
 | E2E mock | `pnpm e2e` |
 | E2E server | `pnpm e2e:server` |
 
-CI（`.github/workflows/ci.yml`）在 PR 上运行：install → contracts build → typecheck → **lint** → tests → coverage → mock + vue tests → bundle verify → `pnpm e2e` → `pnpm e2e:server`，并注入 Postgres `DATABASE_URL`（集成与覆盖率零跳过）。
+CI：`verify` job（含 `pnpm test:coverage` + mock `pnpm e2e`）与 `e2e-server` matrix job（`STORE=memory|postgres`，各 9 个 server E2E）。
 
 本地 Postgres：
 

@@ -8,6 +8,7 @@ export {
   clearThreeDsHandoff,
   consumeReturnParams,
   readThreeDsHandoff,
+  resetThreeDsResolveState,
   resolveThreeDsReturn,
   storeThreeDsHandoff,
 } from './confirm/three-ds-handoff'

@@ -6,6 +6,14 @@ import { describe, expect, it, vi } from 'vitest'
 import PaymentLinkEmbed from './PaymentLinkEmbed.vue'
 
 describe('PaymentLinkEmbed', () => {
+  it('flags invalid email with aria-invalid', async () => {
+    const wrapper = mount(PaymentLinkEmbed)
+    const input = wrapper.get('#nexus-link-email')
+    await input.setValue('not-an-email')
+    expect(input.attributes('aria-invalid')).toBe('true')
+    expect(wrapper.find('[role="alert"]').text()).toContain('email')
+  })
+
   it('rejects a wrong sandbox OTP', async () => {
     vi.useFakeTimers()
     const wrapper = mount(PaymentLinkEmbed)

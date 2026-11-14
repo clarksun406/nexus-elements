@@ -314,7 +314,12 @@ describe('checkout routes', () => {
   it('rejects subscription mode checkout sessions', async () => {
     const response = await call('POST', '/v1/checkout/sessions', { mode: 'subscription', amount: 500, currency: 'usd' })
     expect(response.statusCode).toBe(400)
-    expect(errorOf(response).code).toBe('subscription_mode_not_supported')
+    const body = response.json().error
+    expect(body).toMatchObject({
+      type: 'api_error',
+      code: 'subscription_mode_not_supported',
+    })
+    expect(body.message).toContain('subscription')
   })
 
   it('requires the client secret to read a session', async () => {

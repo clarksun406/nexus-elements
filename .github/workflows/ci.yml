@@ -44,4 +44,43 @@ jobs:
       - run: pnpm verify:bundle
       - run: node ./node_modules/@playwright/test/cli.js install --with-deps chromium
       - run: pnpm e2e
-      - run: pnpm e2e:server
+
+  e2e-server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        store: [memory, postgres]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: nexus
+          POSTGRES_PASSWORD: nexus
+          POSTGRES_DB: nexus
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nexus -d nexus"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://nexus:nexus@localhost:5432/nexus
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: node ./node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Server E2E (${{ matrix.store }})
+        run: STORE=${{ matrix.store }} pnpm e2e:server
+        env:
+          STORE: ${{ matrix.store }}

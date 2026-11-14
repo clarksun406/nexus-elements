@@ -1,5 +1,8 @@
 const STORAGE_KEY = 'nexus:3ds-handoff:v1'
+const RESOLVE_LOCK_KEY = 'nexus:3ds-resolve-lock:v1'
 const DEFAULT_ABANDON_MS = 15 * 60 * 1000
+
+let resolveInFlight: Promise<ThreeDsReturnResolution> | null = null
 
 export interface ThreeDsHandoff {
   intentId: string
@@ -43,6 +46,12 @@ export function readThreeDsHandoff(): ThreeDsHandoff | null {
 export function clearThreeDsHandoff(): void {
   if (!canUseSessionStorage()) return
   sessionStorage.removeItem(STORAGE_KEY)
+  sessionStorage.removeItem(RESOLVE_LOCK_KEY)
+}
+
+export function resetThreeDsResolveState(): void {
+  resolveInFlight = null
+  clearThreeDsHandoff()
 }
 
 export function consumeReturnParams(searchParams: URLSearchParams): { status: string | null; intentId: string | null } {
@@ -75,12 +84,20 @@ async function postThreeDsComplete(
   })
 }
 
-export async function resolveThreeDsReturn(options: {
+async function resolveThreeDsReturnInternal(options: {
   apiBase: string
   publishableKey: string
   searchParams?: URLSearchParams
   abandonAfterMs?: number
 }): Promise<ThreeDsReturnResolution> {
+  if (canUseSessionStorage() && sessionStorage.getItem(RESOLVE_LOCK_KEY) === '1') {
+    return { kind: 'none' }
+  }
+  if (canUseSessionStorage()) {
+    sessionStorage.setItem(RESOLVE_LOCK_KEY, '1')
+  }
+
+  try {
   const params = options.searchParams ?? new URLSearchParams(window.location.search)
   const { status, intentId: urlIntentId } = consumeReturnParams(params)
   const handoff = readThreeDsHandoff()
@@ -136,4 +153,22 @@ export async function resolveThreeDsReturn(options: {
   }
 
   return { kind: 'none' }
+  } finally {
+    if (canUseSessionStorage()) {
+      sessionStorage.removeItem(RESOLVE_LOCK_KEY)
+    }
+  }
+}
+
+export async function resolveThreeDsReturn(options: {
+  apiBase: string
+  publishableKey: string
+  searchParams?: URLSearchParams
+  abandonAfterMs?: number
+}): Promise<ThreeDsReturnResolution> {
+  if (resolveInFlight) return resolveInFlight
+  resolveInFlight = resolveThreeDsReturnInternal(options).finally(() => {
+    resolveInFlight = null
+  })
+  return resolveInFlight
 }

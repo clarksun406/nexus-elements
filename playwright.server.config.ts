@@ -6,7 +6,7 @@ const baseURL = `http://127.0.0.1:${port}`
 
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: ['card.spec.ts', 'checkout.spec.ts'],
+  testMatch: ['card.spec.ts', 'checkout.spec.ts', 'server-critical.spec.ts'],
   timeout: 60_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
