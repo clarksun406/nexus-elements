@@ -13,6 +13,8 @@ export function threeDsPage(intentId: string, returnUrl: string): string {
   <p>银行要求额外身份验证<br/>Intent: ${intentId}</p>
   <button class="approve" onclick="complete('approved')">验证通过</button>
   <button class="decline" onclick="complete('failed')">验证失败</button>
+  <button class="decline" onclick="complete('cancelled')">取消验证</button>
+  <p style="margin-top:16px;font-size:12px;color:#6b7280">若直接关闭本页，商户端可能无法收到结果（取决于浏览器行为）。</p>
 </div>
 <script>
   function complete(status) {

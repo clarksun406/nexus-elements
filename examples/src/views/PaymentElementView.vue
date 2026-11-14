@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { NexusElements, NexusPaymentElement } from '@nexus-elements/vue'
-import type { Nexus, NexusElements as NexusElementsInstance, ChangeEvent, SavedPaymentMethod } from '@nexus-elements/core'
+import type { Nexus, NexusElements as NexusElementsInstance, ChangeEvent, PaymentElementOptions, SavedPaymentMethod } from '@nexus-elements/core'
 
 const PUBLISHABLE_KEY = 'pk_test_nexus_example_key'
 
@@ -15,14 +15,17 @@ const result = ref<{ type: 'success' | 'error'; message: string } | null>(null)
 
 const showSaved = ref(false)
 const collectEmail = ref(false)
+const showLinkRow = ref(new URLSearchParams(window.location.search).get('link') === '1')
 const savedMethods = ref<SavedPaymentMethod[]>([])
 
-const elementOptions = computed(() => ({
+const elementOptions = computed((): PaymentElementOptions => ({
   layout: layout.value,
   business: { name: 'Nexus Demo Store', amount: amount.value, currency: currency.value },
   savedPaymentMethods: showSaved.value ? savedMethods.value.map((pm) => ({ ...pm })) : undefined,
   fields: collectEmail.value ? { billingDetails: { email: 'required' as const } } : undefined,
   defaultValues: { billingDetails: { name: 'Nexus Demo User' } },
+  linkAuthentication: showLinkRow.value ? ('auto' as const) : undefined,
+  wallets: showLinkRow.value ? ['link'] : undefined,
 }))
 
 onMounted(async () => {

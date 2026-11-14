@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { NexusElements, NexusCardElement } from '@nexus-elements/vue'
-import { createNexus } from '@nexus-elements/core'
+import { createNexus, resolveThreeDsReturn } from '@nexus-elements/core'
 import type { Appearance, ChangeEvent, NexusElement as NexusElementInstance } from '@nexus-elements/core'
 
 const PUBLISHABLE_KEY = 'pk_test_nexus_example_key'
@@ -35,14 +35,15 @@ const cardOptions = computed(() => ({
   disabled: disabled.value,
 }))
 
-onMounted(() => {
-  const params = new URLSearchParams(window.location.search)
-  const status = params.get('status')
-  const intentId = params.get('intent')
-  if (status === 'approved') {
-    result.value = { type: 'success', message: `支付成功！${intentId ?? ''} · 3DS 验证通过 · ¥99.00` }
-  } else if (status === 'failed') {
-    result.value = { type: 'error', message: `3DS 验证失败（${intentId ?? ''}），请重新支付。` }
+onMounted(async () => {
+  const resolution = await resolveThreeDsReturn({
+    apiBase: '',
+    publishableKey: PUBLISHABLE_KEY,
+  })
+  if (resolution.kind === 'approved') {
+    result.value = { type: 'success', message: `${resolution.userMessage ?? '支付成功'} · ¥99.00` }
+  } else if (resolution.kind === 'failed' || resolution.kind === 'cancelled' || resolution.kind === 'abandoned' || resolution.kind === 'timeout') {
+    result.value = { type: 'error', message: resolution.userMessage ?? '3DS 验证未完成' }
   }
 })
 
@@ -93,7 +94,7 @@ async function handlePay() {
     } else if (paymentIntent?.status === 'succeeded') {
       result.value = { type: 'success', message: `支付成功！${paymentIntent.id} · ¥99.00` }
     } else if (paymentIntent?.status === 'requires_action') {
-      result.value = { type: 'action', message: '需要额外验证（3DS），正在跳转...' }
+      result.value = { type: 'action', message: '需要额外验证（3DS），正在跳转…完成后返回本页查看结果。' }
     } else {
       result.value = { type: 'action', message: `支付状态: ${paymentIntent?.status ?? 'unknown'}` }
     }

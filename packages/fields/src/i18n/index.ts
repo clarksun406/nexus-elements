@@ -232,7 +232,7 @@ export function messageKeyCount(): number {
 }
 
 export function t<K extends keyof Messages>(key: K): string {
-  localeRevision.value
+  void localeRevision.value
   const dict = loaded.get(locale.value)
   const fromLocale = dict?.[key as keyof Dictionary]
   if (typeof fromLocale === 'string') return fromLocale
@@ -242,7 +242,7 @@ export function t<K extends keyof Messages>(key: K): string {
 }
 
 export const validationMessages = computed<ValidationMessages>(() => {
-  localeRevision.value
+  void localeRevision.value
   const dict = loaded.get(locale.value) ?? en
   return {
     cardInvalid: dict.cardInvalid,

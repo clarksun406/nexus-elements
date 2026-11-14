@@ -7,6 +7,14 @@ import { consumeToken } from './tokens.js'
 import { emitEvent, newClientSecret } from './webhooks.js'
 
 export async function createCheckoutSession(deps: ServiceDeps, ctx: MerchantContext, body: Record<string, unknown>): Promise<ApiResult> {
+  if (body.mode === 'subscription') {
+    return fail(
+      400,
+      'api_error',
+      'subscription_mode_not_supported',
+      'Checkout mode=subscription 尚未支持。请使用 payment 模式或由商户自建订阅计费系统。',
+    )
+  }
   const amount = validateAmount(body.amount)
   if (!amount.ok) return fail(amount.error.status, amount.error.type, amount.error.code, amount.error.message)
   const n = await deps.repo.nextSequence('cs')

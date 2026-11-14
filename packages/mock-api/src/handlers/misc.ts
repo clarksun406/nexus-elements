@@ -8,6 +8,9 @@ export function handleComplete3ds(store: MockStore, res: ServerResponse, body: R
   const intent = store.intents.get(body.intent as string)
   if (intent && intent.status === 'requires_action') {
     intent.status = body.status === 'approved' ? 'succeeded' : 'requires_payment_method'
+    if (body.status === 'cancelled') {
+      intent.metadata = { ...(intent.metadata ?? {}), three_ds_outcome: 'cancelled' }
+    }
   }
   json(res, 200, { ok: true })
 }

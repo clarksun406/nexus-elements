@@ -147,7 +147,7 @@ export function mod97Check(iban: string): boolean {
   for (const char of rearranged) {
     const value = char >= 'A' && char <= 'Z' ? (char.charCodeAt(0) - 55).toString() : char
     remainder += value
-    let num = parseInt(remainder, 10)
+    const num = parseInt(remainder, 10)
     remainder = (num % 97).toString()
   }
   return parseInt(remainder, 10) === 1

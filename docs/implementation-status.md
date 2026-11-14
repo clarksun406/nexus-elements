@@ -64,8 +64,8 @@
 | SEC-003 | 🔶 | sandbox 已限制权限；`allow-same-origin` 因同源 mock 保留（生产需独立域，见 SEC-005） |
 | SEC-004 | ✅ | 商户页只收到 token / 品牌等元数据。拆分卡在字段源站经 AES-GCM BroadcastChannel 聚合，父页面桥会再删掉 number/cvc/iban/account_number |
 | SEC-005 | 🔶 | `fieldsUrl` 可配置指向独立部署；生产独立域 / 开发 srcdoc 未实现 |
-| SEC-006 | ⬜ | CSP 配置（属服务端部署项） |
-| SEC-007 | ⬜ | fields 域 X-Frame-Options（属服务端部署项） |
+| SEC-006 | ✅ | `apps/server` 与 mock-api 对 `/3ds-mock`、托管结账路径下发 CSP（含 `frame-ancestors`）；示例 fields 插件对 HTML 注入 CSP |
+| SEC-007 | ✅ | API 路由默认 `X-Frame-Options: DENY`（或 SAMEORIGIN）；可嵌入路径通过 CSP `frame-ancestors` 限制 |
 | SEC-008 | ✅ | 字段层无任何 localStorage / sessionStorage / cookie 写入 |
 | SEC-009 | ✅ | `scripts/verify-bundle.mjs` 自动生成 SHA-384 SRI 哈希；`loadScript({ integrity })` 设置 `script.integrity` + `crossOrigin` |
 | TOK-001 | ✅ | iframe 内 POST `/v1/tokens` 换取一次性 token（`tok_test_*` / `pm_test_*`） |
@@ -110,7 +110,7 @@
 | PE-004 | ✅ | `defaultPaymentMethod` |
 | PE-005 | ✅ | 按 `country` 过滤（currency 匹配规则在 `PaymentField.vue` 内） |
 | PE-006 | ✅ | 已保存支付方式列表渲染 + 切换（`savedPaymentMethods` 选项） |
-| PE-007 | ⬜ | 内嵌 Link Authentication（P2） |
+| PE-007 | ✅ | Payment Element 内嵌 Link 邮箱行 + 沙盒 OTP（`PaymentLinkEmbed.vue`）；`wallets: ['link']` 或 `linkAuthentication: 'auto'`；明确标注非 Stripe Link |
 | PE-008 | ✅ | change / ready / focus / blur 事件（change 携带 `paymentMethodType`） |
 | PE-009 | ✅ | tokenize 前校验子表单，错误经 `nexus:token-result` 返回 |
 | PE-010 | ✅ | billingDetails 字段控制（`auto`/`never`/`optional`/`required`） |

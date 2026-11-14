@@ -4,8 +4,16 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 api_port="${E2E_API_PORT:-3101}"
 app_port="${E2E_APP_PORT:-3100}"
+store="${STORE:-memory}"
 
-PORT="$api_port" HOST=127.0.0.1 STORE=memory LOG_LEVEL=info NODE_ENV=test \
+if [ "$store" = "postgres" ] && [ -z "${DATABASE_URL:-}" ]; then
+  echo "DATABASE_URL is required when STORE=postgres" >&2
+  exit 1
+fi
+
+pnpm --filter @nexus-elements/server build >/dev/null
+
+PORT="$api_port" HOST=127.0.0.1 STORE="$store" DATABASE_URL="${DATABASE_URL:-}" LOG_LEVEL=info NODE_ENV=test \
   NEXUS_PUBLISHABLE_KEY=pk_test_nexus_example_key \
   NEXUS_SECRET_KEY=sk_test_nexus_example_secret \
   NEXUS_WEBHOOK_SECRET=whsec_test_nexus_example \

@@ -82,7 +82,7 @@ async function handleSubscribe() {
       step.value = 'success'
       result.value = {
         type: 'success',
-        message: `订阅成功！${currentPlan.value.name} · ${currentPlan.value.label} · ${setupIntent.id}`,
+        message: `支付方式已保存（SetupIntent ${setupIntent.id}），可用于商户自建计费系统续费。套餐示意：${currentPlan.value.name} · ${currentPlan.value.label}`,
       }
     } else {
       result.value = { type: 'error', message: `SetupIntent 状态: ${setupIntent?.status ?? 'unknown'}` }
@@ -100,7 +100,7 @@ async function handleSubscribe() {
     <div class="payment-card">
       <router-link to="/" class="breadcrumb">&larr; 返回示例列表</router-link>
       <h1>订阅支付</h1>
-      <p class="subtitle">Billing — 套餐选择 + Payment Element + SetupIntent 自动续费</p>
+      <p class="subtitle">Billing — 套餐选择 + Payment Element + SetupIntent（仅保存支付方式，演示非真实订阅计费）</p>
 
       <!-- Step 1: Plan Selection -->
       <div v-if="step === 'plan'" class="plan-section">
@@ -161,9 +161,9 @@ async function handleSubscribe() {
       <!-- Step 3: Success -->
       <div v-if="step === 'success'" class="success-section">
         <div class="success-icon">&#10003;</div>
-        <h2>订阅成功</h2>
+        <h2>支付方式已保存</h2>
         <p class="success-detail">{{ result?.message }}</p>
-        <p class="success-note">支付方式已保存，后续将自动续费。您可随时取消订阅。</p>
+        <p class="success-note">本示例未创建订阅或扣款；真实续费需由商户后端计费系统（如发票/Subscription API）发起。</p>
         <button class="btn-back" @click="backToPlans">返回套餐选择</button>
       </div>
     </div>
