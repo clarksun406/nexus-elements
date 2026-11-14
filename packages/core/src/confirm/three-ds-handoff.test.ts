@@ -14,7 +14,7 @@ describe('three-ds handoff', () => {
   beforeEach(() => {
     sessionStorage.clear()
     resetThreeDsResolveState()
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response()))
     window.history.replaceState(null, '', '/card-combined')
   })
 
@@ -108,7 +108,7 @@ describe('three-ds handoff', () => {
       returnUrl: '/card-combined',
     })
     vi.mocked(fetch).mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({ ok: true }), 50)),
+      () => new Promise((resolve) => setTimeout(() => resolve(new Response()), 50)),
     )
     const first = resolveThreeDsReturn({ apiBase: '', publishableKey: 'pk_test_x' })
     const second = resolveThreeDsReturn({ apiBase: '', publishableKey: 'pk_test_x' })

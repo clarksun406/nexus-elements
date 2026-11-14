@@ -64,7 +64,7 @@ describe('PaymentField Link row (bridge)', () => {
     const payloads: unknown[] = []
     const wrapper = await bootWithLink()
     await vi.waitFor(() => expect(wrapper.find('#nexus-link-email').exists()).toBe(true))
-    const send = vi.spyOn(bridge, 'send').mockImplementation((type, payload) => {
+    const send = vi.spyOn(bridge, 'send').mockImplementation(async (type, payload) => {
       if (type === 'nexus:change') payloads.push(payload)
     })
     await wrapper.get('#nexus-link-email').setValue('user@example.com')
@@ -88,7 +88,7 @@ describe('PaymentField Link row (bridge)', () => {
 
   it('keeps linkVerified false after a wrong OTP', async () => {
     const payloads: Array<{ value?: Record<string, string> }> = []
-    vi.spyOn(bridge, 'send').mockImplementation((type, payload) => {
+    vi.spyOn(bridge, 'send').mockImplementation(async (type, payload) => {
       if (type === 'nexus:change') payloads.push(payload as { value?: Record<string, string> })
     })
     const wrapper = await bootWithLink()
