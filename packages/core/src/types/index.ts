@@ -158,6 +158,8 @@ export interface PaymentElementOptions {
   allowSavePaymentMethod?: boolean
   savedPaymentMethods?: SavedPaymentMethod[]
   wallets?: Array<'applePay' | 'googlePay' | 'paypal' | 'link'>
+  /** When `auto`, shows the embedded Link email row (sandbox). `never` hides it even if wallets includes link. */
+  linkAuthentication?: 'auto' | 'never'
   fields?: {
     billingDetails?: {
       name?: BillingDetailsFieldControl

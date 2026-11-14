@@ -1,7 +1,7 @@
 # Nexus Elements — Roadmap
 
 > 项目里程碑与功能演进路线。详细实现状态见 [implementation-status.md](implementation-status.md)。
-> 更新日期：2026-07-28
+> 更新日期：2026-11-14
 
 ---
 
@@ -101,7 +101,7 @@
 
 | 能力 | 优先级 | 说明 |
 |------|--------|------|
-| 生产独立域部署 | P0 | SEC-005：fields 独立域部署（非同源），SEC-006/007 CSP + X-Frame-Options |
+| 生产独立域部署 | P0 | SEC-005：fields 独立域部署（非同源）。SEC-006/007 已在 server + mock-api + 示例 fields 服务落地（CSP + `frame-ancestors`，API `X-Frame-Options`） |
 | 应用层加密 | ✅ | TOK-002：字段层 RSA-OAEP + AES-256-GCM，公钥来自 `GET /v1/encryption_key`。详见 docs/security.md |
 | 后端 Mock 模块 | P1 ✅ | `@nexus-elements/mock-api` 独立包：Vite 插件 / 独立 HTTP 服务器 / Storybook 集成，MockStore 状态重置，13 路由全覆盖 |
 | 真实品牌图标 | P2 ✅ | CE-003：10 个卡品牌内联 SVG 图标，`v-html` 渲染，💳 未知品牌 fallback |
@@ -205,6 +205,20 @@
 **新增 `e2e-appearance.py`**：覆盖主题/变量/规则/字体/语言/元素样式/方法/事件。
 
 **增强 `e2e-card-combined.py`**：新增 postal code 输入、hidePostalCode 切换、disabled 切换、focus/blur/clear 方法、事件日志验证。
+
+---
+
+## Batch 1（2026-11，UI + 契约诚实性）
+
+| 项 | 交付 |
+|----|------|
+| Lint | 根目录 ESLint 9 + CI `pnpm lint` |
+| 3DS 中途退出 | `resolveThreeDsReturn`、handoff、`cancelled` 挑战结果、示例页可恢复错误 |
+| 订阅语义 | Billing 示例文案；checkout `mode: subscription` 显式 400 |
+| PE-007 | Payment Element 内嵌 Link 沙盒行（OTP 123456） |
+| 文档 | implementation-status / api-reference / integration-guide / testing 同步 |
+
+仍待办：P24 50+ 银行虚拟滚动、钱包检测大改、fields 独立域生产部署、React 适配层、真实收单/APM/计费。
 
 ---
 

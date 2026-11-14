@@ -17,7 +17,7 @@ export function fieldsServerPlugin(): Plugin {
   return {
     name: 'nexus-fields-server',
     configureServer(server) {
-      server.middlewares.use('/fields', ((req: IncomingMessage, res: ServerResponse, next: Connect.NextFunction) => {
+      server.middlewares.use('/fields', ((req: IncomingMessage, res: ServerResponse, _next: Connect.NextFunction) => {
         const url = (req.url ?? '/').split('?')[0]
         const filePath = join(fieldsDist, url === '/' ? 'index.html' : url)
 

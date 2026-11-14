@@ -50,7 +50,7 @@ test('bank elements complete without returning a full IBAN', async ({ page }) =>
   await expect(page.locator('.value-dump')).not.toContainText('DE89370400440532013000')
 })
 
-test('billing flow subscribes with a card', async ({ page }) => {
+test('billing flow saves a card without claiming a subscription was created', async ({ page }) => {
   await page.goto('/billing')
   await expect(page.locator('.plan-card')).toContainText('Nexus Pro')
   await page.getByRole('button', { name: /年/ }).click()
@@ -61,7 +61,27 @@ test('billing flow subscribes with a card', async ({ page }) => {
   await frame.locator('input.nexus-cvc').pressSequentially('123', { delay: 15 })
   await expect(page.locator('.btn-pay')).toBeEnabled()
   await page.locator('.btn-pay').click()
-  await expect(page.locator('.success-section')).toContainText('订阅成功')
+  await expect(page.locator('.success-section')).toContainText('支付方式已保存')
+  await expect(page.locator('.success-section')).not.toContainText('订阅成功')
+  await page.screenshot({ path: '/opt/cursor/artifacts/billing-payment-method-saved.png' })
+})
+
+test('payment element shows the sandbox Link email row', async ({ page }) => {
+  await page.goto('/payment-element?link=1')
+  const frame = page.frameLocator("iframe[title='Nexus payment element']")
+  await expect(frame.locator('.nexus-link-sandbox-badge')).toContainText(/sandbox/i)
+  await frame.locator('#nexus-link-email').fill('link.demo@nexus.test')
+  await frame.getByRole('button', { name: /sandbox code/i }).click()
+  const otp = frame.locator('.nexus-payment-link-otp')
+  await otp.nth(0).fill('1')
+  await otp.nth(1).fill('2')
+  await otp.nth(2).fill('3')
+  await otp.nth(3).fill('4')
+  await otp.nth(4).fill('5')
+  await otp.nth(5).fill('6')
+  await frame.getByRole('button', { name: /Verify/i }).click()
+  await expect(frame.locator('.nexus-link-verified')).toBeVisible()
+  await page.screenshot({ path: '/opt/cursor/artifacts/payment-element-inline-link.png' })
 })
 
 test('cart updates quantity, shipping, and promo state', async ({ page }) => {

@@ -6,6 +6,7 @@ import { getBrandRule } from '../validation/brands'
 import { t } from '../i18n'
 import { getBrandIcon } from '../assets/brand-icons'
 import { publishTokenResult } from '../api/token'
+import PaymentLinkEmbed from './PaymentLinkEmbed.vue'
 
 type Layout = 'tabs' | 'accordion' | 'radio'
 
@@ -86,14 +87,27 @@ const savedMethods = computed<SavedMethod[]>(() => {
 
 const selectedSaved = ref('')
 const saveCard = ref(false)
-const linkEmail = ref('')
 const collapsed = ref(false)
+const linkState = ref<{ complete: boolean; empty: boolean; verified: boolean; email?: string; error?: string }>({
+  complete: false,
+  empty: true,
+  verified: false,
+})
 
 const allowSave = computed(() => options.value.allowSavePaymentMethod !== false)
 const showLink = computed(() => {
+  if (options.value.linkAuthentication === 'never') return false
+  if (options.value.linkAuthentication === 'auto') return true
   const wallets = options.value.wallets
   return Array.isArray(wallets) && wallets.includes('link')
 })
+
+function onLinkState(payload: { complete: boolean; empty: boolean; verified: boolean; email?: string; error?: string }) {
+  linkState.value = payload
+  if (payload.verified && payload.email && !billingEmail.value.trim()) {
+    billingEmail.value = payload.email
+  }
+}
 
 const billingControls = computed(() => {
   const fields = options.value.fields as { billingDetails?: Record<string, BillingControl> } | undefined
@@ -229,7 +243,14 @@ function selectMethod(method: string) {
   expandedMethod.value = method
 }
 
-watch([isComplete, isEmpty, isValid, activeMethod, cardError, selectedSaved], () => {
+watch([isComplete, isEmpty, isValid, activeMethod, cardError, selectedSaved, linkState], () => {
+  const linkValue = showLink.value
+    ? {
+        linkSandbox: 'true',
+        linkVerified: linkState.value.verified ? 'true' : 'false',
+        ...(linkState.value.verified && linkState.value.email ? { linkEmail: linkState.value.email } : {}),
+      }
+    : {}
   bridge.send('nexus:change', {
     complete: isComplete.value,
     empty: isEmpty.value,
@@ -238,7 +259,11 @@ watch([isComplete, isEmpty, isValid, activeMethod, cardError, selectedSaved], ()
     paymentMethodType: selectedSaved.value ? 'card' : activeMethod.value,
     brand: !selectedSaved.value && activeMethod.value === 'card' ? brand.value : undefined,
     error: !selectedSaved.value && activeMethod.value === 'card' ? cardError.value : undefined,
-    value: selectedSaved.value ? { savedPaymentMethodId: selectedSaved.value } : undefined,
+    value: selectedSaved.value
+      ? { savedPaymentMethodId: selectedSaved.value, ...linkValue }
+      : Object.keys(linkValue).length > 0
+        ? linkValue
+        : undefined,
   })
 })
 
@@ -360,19 +385,11 @@ const brandIconHtml = computed(() => getBrandIcon(brand.value) ?? '💳')
 
 <template>
   <div class="nexus-payment-element" :class="{ 'nexus-payment-element--collapsed': collapsed }" :style="{ zIndex: 'var(--nexus-z-index, auto)' }">
-    <div v-if="showLink" class="nexus-link-embed">
-      <p class="nexus-label">{{ t('linkTitle') }}</p>
-      <input
-        class="nexus-input"
-        type="email"
-        autocomplete="email"
-        :aria-label="t('linkEmailLabel')"
-        :placeholder="t('linkEmailPlaceholder')"
-        :value="linkEmail"
-        @input="linkEmail = ($event.target as HTMLInputElement).value"
-      />
-      <p class="nexus-hint">{{ t('linkEmbeddedHint') }}</p>
-    </div>
+    <PaymentLinkEmbed
+      v-if="showLink"
+      :default-email="billingDefaults.email"
+      @state="onLinkState"
+    />
     <!-- saved payment methods -->
     <div v-if="savedMethods.length > 0" class="nexus-saved-list">
       <p class="nexus-label nexus-saved-title">{{ t('savedCards') }}</p>

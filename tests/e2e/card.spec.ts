@@ -60,6 +60,18 @@ test('split card tokenizes without exposing the PAN to the parent', async ({ pag
   expect(leaked.join('\n')).not.toContain('4242424242424242')
 })
 
+test('3DS cancel shows a recoverable error on the card page', async ({ page }) => {
+  await page.goto('/card-combined')
+  await fillCard(page, { number: '4000000000003220' })
+  await pay(page)
+  await page.waitForURL('**/3ds-mock**')
+  await page.locator('button.decline', { hasText: '取消验证' }).click()
+  await page.waitForURL('**/card-combined**')
+  await expect(page.locator('.result-box--error')).toContainText('取消')
+  await expect(page.locator('.result-box--error')).toContainText('重新')
+  await page.screenshot({ path: '/opt/cursor/artifacts/3ds-cancel-result.png' })
+})
+
 test('3DS challenge returns to a succeeded payment', async ({ page }) => {
   await page.goto('/card-combined')
   await fillCard(page, { number: '4000000000003220' })

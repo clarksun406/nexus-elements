@@ -1,6 +1,7 @@
 import { NexusElement } from './element'
 import { NexusElements } from './elements'
 import { ELEMENT_SANDBOX } from './iframe/manager'
+import { storeThreeDsHandoff } from './confirm/three-ds-handoff'
 import { followRedirect } from './navigation'
 import type {
   ConfirmCardPaymentParams,
@@ -98,6 +99,14 @@ export class Nexus {
       const paymentIntent = data.payment_intent as PaymentIntent
 
       if (paymentIntent.status === 'requires_action' && data.next_action?.redirect_url) {
+        if (params.return_url) {
+          storeThreeDsHandoff({
+            intentId: paymentIntent.id,
+            clientSecret,
+            startedAt: Date.now(),
+            returnUrl: params.return_url,
+          })
+        }
         followRedirect(data.next_action.redirect_url)
       }
 
@@ -173,6 +182,15 @@ export class Nexus {
 
       if (paymentIntent.status === 'requires_action' && params.redirect !== 'if_required') {
         if (data.next_action?.redirect_url) {
+          const returnUrl = params.confirmParams?.return_url
+          if (returnUrl) {
+            storeThreeDsHandoff({
+              intentId: paymentIntent.id,
+              clientSecret,
+              startedAt: Date.now(),
+              returnUrl,
+            })
+          }
           followRedirect(data.next_action.redirect_url)
           return { paymentIntent }
         }

@@ -60,6 +60,19 @@ export interface ExtraMessages {
   linkUseLink: string
   linkOrPayAnotherWay: string
   linkEmbeddedHint: string
+  linkSandboxBadge: string
+  linkSandboxSendCode: string
+  linkSandboxSending: string
+  linkSandboxOtpLabel: string
+  linkSandboxOtpDigit: string
+  linkSandboxOtpSentPrefix: string
+  linkSandboxVerify: string
+  linkSandboxVerifying: string
+  linkSandboxOtpInvalid: string
+  linkSandboxResend: string
+  linkSandboxResendWait: string
+  linkSandboxVerifiedPrefix: string
+  linkSandboxDemoHint: string
   expressTitle: string
   expressCancel: string
   expressHorizontal: string
@@ -217,7 +230,20 @@ export const extraEn: ExtraMessages = {
   linkEmailPlaceholder: 'email@example.com',
   linkUseLink: 'Pay with Link',
   linkOrPayAnotherWay: 'Or pay another way',
-  linkEmbeddedHint: 'We will look up your saved Link details.',
+  linkEmbeddedHint: 'Local Nexus Link sandbox lookup only — not Stripe Link.',
+  linkSandboxBadge: 'Nexus Link sandbox',
+  linkSandboxSendCode: 'Send sandbox code',
+  linkSandboxSending: 'Sending…',
+  linkSandboxOtpLabel: 'One-time sandbox code',
+  linkSandboxOtpDigit: 'Digit',
+  linkSandboxOtpSentPrefix: 'Enter the 6-digit sandbox code sent to',
+  linkSandboxVerify: 'Verify',
+  linkSandboxVerifying: 'Verifying…',
+  linkSandboxOtpInvalid: 'Sandbox code incorrect. Try 123456 in demo.',
+  linkSandboxResend: 'Resend code',
+  linkSandboxResendWait: 'Resend in',
+  linkSandboxVerifiedPrefix: 'Sandbox Link verified for',
+  linkSandboxDemoHint: 'Demo email — sandbox will offer a saved card hint after verification.',
   expressTitle: 'Express checkout',
   expressCancel: 'Cancel',
   expressHorizontal: 'Horizontal',

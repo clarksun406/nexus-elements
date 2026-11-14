@@ -192,6 +192,18 @@ export function registerContractSuite(getBase: () => string): void {
     expect(declined.status).toBe(402)
   })
 
+  it('rejects checkout sessions in subscription mode', async () => {
+    const base = getBase()
+    const response = await post(base, '/v1/checkout/sessions', {
+      mode: 'subscription',
+      amount: 1000,
+      currency: 'usd',
+    })
+    expect(response.status).toBe(400)
+    const body = await response.json() as ErrorBody
+    expect(body.error.code).toBe('subscription_mode_not_supported')
+  })
+
   it('opens, reads, declines, and completes a checkout session', async () => {
     const base = getBase()
     const created = await post(base, '/v1/checkout/sessions', {

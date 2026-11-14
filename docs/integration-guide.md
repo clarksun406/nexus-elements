@@ -291,23 +291,33 @@ confirm → requires_action + next_action.redirect_url
    → 浏览器回跳 return_url?status=approved|failed&intent=pi_xxx
 ```
 
-商户页面需在加载时处理回跳参数：
+商户页面建议使用 SDK 辅助函数处理回跳与「挑战中途离开」：
 
 ```ts
-onMounted(() => {
-  const params = new URLSearchParams(location.search)
-  const status = params.get('status')     // 'approved' | 'failed'
-  const intentId = params.get('intent')
-  if (status === 'approved') { /* 展示成功；可再查询 intent 终态 */ }
-  if (status === 'failed') { /* 提示重新支付 */ }
+import { resolveThreeDsReturn } from '@nexus-elements/core'
+
+onMounted(async () => {
+  const outcome = await resolveThreeDsReturn({
+    apiBase: '', // 与 Nexus 实例一致
+    publishableKey: 'pk_test_xxx',
+  })
+  if (outcome.kind === 'approved') showSuccess(outcome.userMessage)
+  if (['failed', 'cancelled', 'abandoned', 'timeout'].includes(outcome.kind)) showRecoverableError(outcome.userMessage)
 })
 ```
 
+`resolveThreeDsReturn` 会解析 `status=approved|failed|cancelled`；若 session 中存在未完成的 handoff 且 URL 无结果，则调用 `POST /v1/3ds/complete`（`cancelled`）并把 Intent 置回 `requires_payment_method`，便于重试。
+
 要点：
 
-- `confirmCardPayment` 总是自动跳转；`confirmPayment` 传 `redirect: 'if_required'` 可拿到 `requires_action` 结果自行处理
-- `return_url` 建议 `location.origin + location.pathname`（去掉旧 query）
+- `confirmCardPayment` 在跳转前写入 sessionStorage handoff；`confirmPayment` 传 `redirect: 'if_required'` 可抑制自动跳转
+- 挑战页提供「取消验证」；直接关闭挑战页或新开标签时，**商户页不一定能感知**，需文档化限制
+- `return_url` 建议 `location.origin + location.pathname`
 - 测试卡 `4000 0000 0000 3220` 稳定触发 3DS
+
+### Billing / 订阅示意
+
+示例 `BillingView` 仅演示 **SetupIntent 保存支付方式**，不创建真实订阅。`POST /v1/checkout/sessions` 的 `mode: subscription` 当前返回 `subscription_mode_not_supported`（未内置循环计费引擎）。
 
 ---
 

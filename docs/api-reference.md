@@ -196,7 +196,8 @@ await nexus.confirmSetup({ elements, clientSecret, confirmParams: { return_url: 
 | `defaultPaymentMethod` | `string` | 默认选中方式 |
 | `paymentMethods` | （经 create options 传入）| 渲染的方式列表，默认 card + ideal |
 | `business` | `{ name, amount, currency, country? }` | 商户展示信息 |
-| `wallets` | `Array<'applePay' \| 'googlePay' \| 'paypal' \| 'link'>` | 内嵌钱包 ⬜ |
+| `wallets` | `Array<'applePay' \| 'googlePay' \| 'paypal' \| 'link'>` | `link` 时显示内嵌 Link 沙盒邮箱行（非真实 Stripe Link） |
+| `linkAuthentication` | `'auto' \| 'never'` | 强制显示或隐藏内嵌 Link 行 |
 | `fields.billingDetails` | 各字段 `'auto' \| 'never' \| 'optional' \| 'required'` | ⬜ |
 | `defaultValues.billingDetails` | 预填 | ⬜ |
 

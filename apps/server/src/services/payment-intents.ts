@@ -162,7 +162,11 @@ export async function completeThreeDs(deps: ServiceDeps, ctx: MerchantContext, b
   const id = typeof body.intent === 'string' ? body.intent : ''
   const intent = id ? await deps.repo.findPaymentIntentById(id) : null
   if (intent && intent.merchantId === ctx.merchantId && intent.status === 'requires_action') {
-    const next: PaymentIntentStatus = body.status === 'approved' ? 'succeeded' : 'requires_payment_method'
+    const approved = body.status === 'approved'
+    const next: PaymentIntentStatus = approved ? 'succeeded' : 'requires_payment_method'
+    if (!approved) {
+      intent.metadata = { ...(intent.metadata ?? {}), three_ds_outcome: typeof body.status === 'string' ? body.status : 'failed' }
+    }
     move(intent, next)
     await deps.repo.savePaymentIntent(intent)
     const event = next === 'succeeded' ? 'payment_intent.succeeded' : 'payment_intent.payment_failed'

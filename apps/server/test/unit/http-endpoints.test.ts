@@ -311,6 +311,12 @@ describe('checkout routes', () => {
     expect(errorOf(response).code).toBe('invalid_amount')
   })
 
+  it('rejects subscription mode checkout sessions', async () => {
+    const response = await call('POST', '/v1/checkout/sessions', { mode: 'subscription', amount: 500, currency: 'usd' })
+    expect(response.statusCode).toBe(400)
+    expect(errorOf(response).code).toBe('subscription_mode_not_supported')
+  })
+
   it('requires the client secret to read a session', async () => {
     const created = await call('POST', '/v1/checkout/sessions', { amount: 500, currency: 'eur', ui_mode: 'redirect', success_url: 'https://ok/{SESSION_ID}' })
     const session = created.json().checkout_session

@@ -7,6 +7,15 @@ import { json, errorResponse } from '../utils.js'
 import { validateAndConsumeToken } from './payment-intents.js'
 
 export function handleCreateCheckoutSession(store: MockStore, res: ServerResponse, body: Record<string, unknown>): void {
+  if (body.mode === 'subscription') {
+    return errorResponse(
+      res,
+      400,
+      'api_error',
+      'subscription_mode_not_supported',
+      'Checkout mode=subscription 尚未支持。请使用 payment 模式或由商户自建订阅计费系统。',
+    )
+  }
   const amountResult = validateAmount(body.amount)
   if (!amountResult.ok) {
     return errorResponse(res, amountResult.error.status, amountResult.error.type, amountResult.error.code, amountResult.error.message)
